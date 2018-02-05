@@ -175,6 +175,15 @@ def depress_buildings(base):
     bpy.ops.object.mode_set(mode = 'EDIT')
     bpy.ops.mesh.delete(type='ONLY_FACE')
 
+def raise_roads(scale):
+    roads = [o for o in bpy.context.scene.objects if o.name.startswith('Road')]
+    road_height = scale / 1000 * ROAD_HEIGHT_CAR_MM
+    for r in roads:
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.context.scene.objects.active = r
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.extrude_region_move(TRANSFORM_OT_translate={ "value": (0.0, 0.0, road_height) })
+
 def convert_osm(osm_obj_path, osm_blend_path):
     scale = 1000
     import_obj_file(osm_obj_path)
@@ -193,6 +202,7 @@ def convert_osm(osm_obj_path, osm_blend_path):
     bpy.ops.object.transform_apply(location=True, scale=True)
 
     depress_buildings(base_cube)
+    raise_roads(scale)
     export_blend_file(osm_blend_path)
 
 def main(argv):

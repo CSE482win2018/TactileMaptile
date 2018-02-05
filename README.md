@@ -11,30 +11,32 @@ This is a project as part of the University of Washington's [CSE482: Capstone So
 ### Web
 TBD
 
-### Generatin maps
+### Generating maps
 
 Prerequisite software:
-* [Java JRE or JDK (at least 8)](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
-    ** After installing, ensure that `java` is available on your system's `PATH`.
+* [Java JRE or JDK (at least 7)](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
+* [Gradle](https://gradle.org/install/)
 * [Blender](https://www.blender.org/download/)
-    ** After installing, ensure that `blender` is available on your system's `PATH`. 
 * [Python 3](https://www.python.org/downloads/)
-    ** After installing, ensure that `python3` is available on your system's `PATH`.
-* [OSM2World](http://osm2world.org/download/) - the necessary JAR file can either be downloaded from the site or built from source, and should be put under the `map_generator` directory.
+
+After installing everything, `java`, `gradle`, `blender`, and `python3` (or for Windows, `py -3`) should all be available on your system's `PATH`.
 
 Creating a map goes as follows:
 * An `.osm` file is the input, which describes an area of the world. A .osm file can be download for an arbitary location from [OpenStreetMap](http://www.openstreetmap.org).
-* OSM2World converts the `.osm` file to a `.obj` file
-* Blender converts the `.obj` file to a .stl file and can change features of the map such as its size as well as adding, removing, and modifying features of the map.
+* OSM2World converts the `.osm` file to a `.obj` file.
+* Blender converts the `.obj` file to a `.stl` file and can change features of the map such as its size as well as adding, removing, and modifying features of the map.
 * A slicer program converts the `.stl` file into a file that a 3D printer can use.
 
-To create an `.osm` file, run this command:
+To build the Java project, run `gradle installDist`.
 
+To convert a `.osm` file to a `.obj` file, run: 
 ```
-java -jar OSM2World.jar -i [path to input .osm file] -o [path to output .obj file]
+gradle run -PappArgs="['path to input .osm file', 'path to output .obj file']"
 ```
 
-To create a `.blend` file from the resulting `.obj` file, run this command (inside the `map_generator` directory)
+For example, `gradle run -PappArgs="['data/map.osm', 'data/map.obj']"`.
+
+To create a `.blend` file from the resulting `.obj` file, run:
 
 ```
 blender -b -P convert.py -- [path to input .obj file] -o [path to output .blend file]
