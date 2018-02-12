@@ -228,6 +228,7 @@ def export_stl_separate(base_path, scale):
 
 def export_blend_file(base_path):
     blend_path = base_path + '.blend'
+    print('exporting to ', blend_path)
     bpy.ops.object.select_all(action='SELECT') # it's handy to have everything selected initially
     bpy.ops.wm.save_as_mainfile(filepath=blend_path, check_existing=False, compress=True)
 
@@ -275,7 +276,7 @@ def add_marker1(args, scale):
         coords = json.loads(args.marker1)
         marker_x = float(coords['x'])
         marker_y = float(coords['y'])
-        
+
     mm_to_units = scale / 1000
     radius = MARKER_RADIUS_MM * mm_to_units
     height = MARKER_HEIGHT_MM * mm_to_units
@@ -398,7 +399,7 @@ def water_wave_pattern(object, depth, scale):
             edge_verts[str(verts[0].co.x) + ',' + str(verts[0].co.z)] = True
 
     # Set top verts' y positions. Bottom verts are at 0.
-    density = math.pi * 2 / WATER_WAVE_DISTANCE_MM / (scale/1000) 
+    density = math.pi * 2 / WATER_WAVE_DISTANCE_MM / (scale/1000)
     for v in bm.verts:
         if v.co.y > extrude_height / 2:
             min_height = -10000
@@ -430,16 +431,16 @@ def is_pedestrian(road_name):
 # Join edges that seem to form two ends of the same logical road or railway
 def join_matching_edges(ob, min_x, min_y, max_x, max_y):
     lt = 0.2  # length difference + -
-    dt = 0.15  # max distance 
+    dt = 0.15  # max distance
     at = 0.5  # max sin(angle)  (30°)
-    
+
     bpy.context.scene.objects.active = ob
     bpy.ops.object.mode_set(mode = 'EDIT')
     bpy.ops.mesh.select_all(action='DESELECT')
     from math import sin
     bm = bmesh.from_edit_mesh( bpy.context.object.data )
     bm.edges.ensure_lookup_table()
-    
+
     center   = lambda e : ( e.verts[0].co + e.verts[1].co ) / 2
     length   = lambda e : ( e.verts[0].co - e.verts[1].co ).length
     dist     = lambda v1, v2: (  v2 -  v1 ).length
@@ -457,7 +458,7 @@ def join_matching_edges(ob, min_x, min_y, max_x, max_y):
         return ((verts[0].co[0] + verts[1].co[0]) / 2, \
                 (verts[0].co[1] + verts[1].co[1]) / 2, \
                 (verts[0].co[2] + verts[1].co[2]) / 2)
-    
+
     class CEdge:
         def __init__(self, e, into_edge):
             self.e = e
@@ -465,7 +466,7 @@ def join_matching_edges(ob, min_x, min_y, max_x, max_y):
             self.length = length(e)
             self.into_edge = into_edge
             self.welded = False
-    
+
     # Lengthen an edge that is supposedly at the end of a road, in an attempt to make roads'
     # widths consistent, instead of being the more narrow the greater the angle of their end edge.
     radians_90degrees = math.pi / 2
@@ -482,7 +483,7 @@ def join_matching_edges(ob, min_x, min_y, max_x, max_y):
                 else:
                     verts[0].co = ce.center + (verts[0].co - ce.center) * multiplier
                     verts[1].co = ce.center + (verts[1].co - ce.center) * multiplier
-    
+
     def filter_edges(edges):
         out = []
         for e in edges:
@@ -537,7 +538,7 @@ def join_matching_edges(ob, min_x, min_y, max_x, max_y):
                     continue
                 matches.append(oe)
                 oe.welded = True
-        
+
         if len(matches) == 1:
             # Join nothing where >2 ways meet, else all roads in the scene may become joined and intersect itself
             ev1, ev2 = ce.e.verts[:]
@@ -552,7 +553,7 @@ def join_matching_edges(ob, min_x, min_y, max_x, max_y):
             lengthen_edges(ce, matches[0])
             mark_all_t_junction_edges_welded(ce)
             mark_all_t_junction_edges_welded(matches[0])
-            
+
     print("%s: melding %d out of %d edges" % (ob.name, len(to_weld) / 2, len(bm.edges)))
     bmesh.ops.weld_verts(bm, targetmap = to_weld)
     bmesh.update_edit_mesh(bpy.context.object.data ,True)
@@ -594,7 +595,7 @@ def do_road_areas(roads, height):
     fatten(roads)
     #print("processing %s took %.2f" % (roads.name, time.clock() - t))
 
-def depress_buildings(base):
+def depress_buildings():
     base = bpy.context.scene.objects['Base']
     z_max_base = max(v.co[2] for v in base.data.vertices)
     bpy.ops.object.mode_set(mode = 'OBJECT')
@@ -717,7 +718,7 @@ def process_objects(min_x, min_y, max_x, max_y, scale, no_borders):
     t = time.clock()
     mm_to_units = scale / 1000
     if not no_borders:
-        space = (BORDER_WIDTH_MM - BORDER_HORIZONTAL_OVERLAP_MM) * mm_to_units 
+        space = (BORDER_WIDTH_MM - BORDER_HORIZONTAL_OVERLAP_MM) * mm_to_units
         min_x = min_x + space
         min_y = min_y + space
         max_x = max_x - space
@@ -802,7 +803,7 @@ def process_objects(min_x, min_y, max_x, max_y, scale, no_borders):
     joined_road_areas_ped = join_and_clip(road_areas_ped, min_co, max_co, 'PedestrianRoadAreas')
     clipped_rails = join_and_clip(rails, min_co, max_co, 'Rails')
     joined_buildings = join_and_clip(buildings, min_co, max_co, 'Buildings')
-    
+
     # Buildings
     print('META-START:{"buildingCount":%d}:META-END\n' % (len(buildings)))
     if joined_buildings:
@@ -831,7 +832,7 @@ def process_objects(min_x, min_y, max_x, max_y, scale, no_borders):
     if len(surfaces):
         for surface in surfaces:
             clip_object_to_map(surface, min_co, max_co)
-        
+
     print("processing waters took %.2f" % (time.clock() - t))
 
     # Rails
@@ -876,8 +877,8 @@ def get_obj_bounds(obj):
     return (min_obj_x, min_obj_y, max_obj_x, max_obj_y)
 
 def get_scene_bounds():
-    surface_bounds = [get_obj_bounds(x) for x in bpy.context.scene.objects if re.match(r"^SurfaceArea\d", x.name)]
-    
+    surface_bounds = [get_obj_bounds(x) for x in bpy.context.scene.objects if x.name.startswith('SurfaceArea@0')]
+
     min_x = min(surface_bounds, key=lambda x:x[0])[0]
     min_y = min(surface_bounds, key=lambda x:x[1])[1]
     max_x = max(surface_bounds, key=lambda x:x[2])[2]
