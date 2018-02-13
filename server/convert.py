@@ -292,6 +292,8 @@ def clip_object_to_map(ob, min_co, max_co):
         bpy.ops.mesh.bisect(plane_co=max_co, plane_no=(1, 0, 0), clear_outer=True, use_fill=True)
         bpy.ops.mesh.select_all(action='SELECT')
         bpy.ops.mesh.bisect(plane_co=max_co, plane_no=(0, 1, 0), clear_outer=True, use_fill=True)
+        bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.mesh.bisect(plane_co=min_co, plane_no=(0, 0, -1), clear_outer=True, use_fill=True)
 
         bpy.ops.object.mode_set(mode = 'OBJECT')
         return True
@@ -568,12 +570,12 @@ def do_road_areas(roads, height):
     fatten(roads)
     #print("processing %s took %.2f" % (roads.name, time.clock() - t))
 
-def depress_buildings():
+def depress_buildings(buildings):
     base = bpy.context.scene.objects['Base']
     z_max_base = max(v.co[2] for v in base.data.vertices)
+    print('z_max_base:', z_max_base)
     bpy.ops.object.mode_set(mode = 'OBJECT')
     bpy.ops.object.select_all(action='DESELECT')
-    buildings = [o for o in bpy.context.scene.objects if o.name.startswith('Building') and 'Entrance' not in o.name]
     building_bases = {b.name: None for b in buildings}
     for building in buildings:
         # remove faces
@@ -591,7 +593,7 @@ def depress_buildings():
 
         # identify base vertices
         def is_base_vertex(z_min, vertex):
-            return abs(vertex.co[2] - z_min) < 0.1
+            return abs(vertex.co[2] - z_min) < 0.0001
 
         vertices = building.data.vertices
         z_min = min(v.co[2] for v in vertices)
@@ -611,7 +613,7 @@ def depress_buildings():
         bpy.ops.object.mode_set(mode='EDIT', toggle=False)
         bpy.ops.mesh.delete(type='VERT')
 
-        building.location += Vector((0, 0, 5))
+        building.location += mathutils.Vector((0, 0, 5))
 
         print('extruding')
 
@@ -637,7 +639,7 @@ def depress_buildings():
         b.select = True
     bpy.ops.object.join()
 
-    # intersect the joined buildigns with the base
+    # intersect the joined buildigs with the base
     bpy.context.scene.objects.active = base
     bpy.ops.object.mode_set(mode = 'EDIT')
     bpy.ops.mesh.intersect()
@@ -653,14 +655,15 @@ def depress_buildings():
     bpy.ops.object.mode_set(mode = 'EDIT')
     bpy.ops.mesh.delete(type='VERT')
 
-    # for name,base_vertices in building_bases.items():
-    #     print(">>>", name, "base vertices")
-    #     for v in base_vertices:
-    #         print(v)
+    for name,base_vertices in building_bases.items():
+        print(">>>", name, "base vertices")
+        for v in base_vertices:
+            print(v)
 
     # delete faces of building outlines
     def get_building_face(face_verts, building_bases):
         # do all vertices of a face lie on the same building base?
+        print("Checking: ", face_verts)
         for name,base_verts in building_bases.items():
             if len(face_verts) > len(base_verts):
                 continue
@@ -668,7 +671,7 @@ def depress_buildings():
             for f in face_verts:
                 match = False
                 for b in base_verts:
-                    if abs(f[0] - b[0]) < 0.0001 and abs(f[1] - b[1]) < 0.0001 and abs(f[2] - b[2]) < 1:
+                    if abs(f[0] - b[0]) < 0.001 and abs(f[1] - b[1]) < 0.001 and abs(f[2] - z_max_base) < 0.001:
                         match = True
                 if match:
                     matches += 1
@@ -682,12 +685,18 @@ def depress_buildings():
         face_verts = [base.data.vertices[i].co for i in f.vertices]
         building = get_building_face(face_verts, building_bases)
         if building is not None:
+            print("<><><> building:", building)
             f.select = True
 
     bpy.ops.object.mode_set(mode = 'EDIT')
     bpy.ops.mesh.delete(type='ONLY_FACE')
+    bpy.ops.mesh.select_all(action = 'DESELECT')
 
-def process_objects(min_x, min_y, max_x, max_y, scale, no_borders):
+    # remove all vertices outside of the base
+    bpy.ops.object.mode_set(mode = 'OBJECT')
+    bpy.context.tool_settings.mesh_select_mode = [True, False, False]
+
+def process_objects(min_x, min_y, max_x, max_y, min_z, max_z, scale, no_borders):
     t = time.clock()
     mm_to_units = scale / 1000
     if not no_borders:
@@ -696,8 +705,8 @@ def process_objects(min_x, min_y, max_x, max_y, scale, no_borders):
         min_y = min_y + space
         max_x = max_x - space
         max_y = max_y - space
-    min_co = (min_x, min_y, 0)
-    max_co = (max_x, max_y, 0)
+    min_co = (min_x, min_y, min_z)
+    max_co = (max_x, max_y, max_z)
 
     # First find out everything that we can join together into combined objects and do join,
     # because CPU usage is dominated by each Blender operation iterating through every object in the scene.
@@ -713,6 +722,7 @@ def process_objects(min_x, min_y, max_x, max_y, scale, no_borders):
     joinable_waterways = []
     inner_water_areas = []
     deleteables = []
+    other_clippables = []
     for ob in all_mesh_objects():
         if ob.name.startswith('BuildingEntrance'):
             deleteables.append(ob)
@@ -756,8 +766,8 @@ def process_objects(min_x, min_y, max_x, max_y, scale, no_borders):
                     clippable_waterways.append(ob)
                 elif ob.name.startswith('Water') or ob.name.startswith('AreaFountain'):
                     clippable_water_areas.append(ob)
-                else:
-                    print("UNHANDLED CLIPPABLE OBJECT TYPE: " + ob.name)
+                elif not ob.name.startswith('Base') and not ob.name.startswith('Corner') and not ob.name.startswith('Borders'):
+                    other_clippables.append(ob)
 
     print("initial steps took %.2f" % (time.clock() - t))
 
@@ -776,14 +786,15 @@ def process_objects(min_x, min_y, max_x, max_y, scale, no_borders):
     joined_road_areas_car = join_and_clip(road_areas_car, min_co, max_co, 'CarRoadAreas')
     joined_road_areas_ped = join_and_clip(road_areas_ped, min_co, max_co, 'PedestrianRoadAreas')
     clipped_rails = join_and_clip(rails, min_co, max_co, 'Rails')
-    joined_buildings = join_and_clip(buildings, min_co, max_co, 'Buildings')
+    # joined_buildings = join_and_clip(buildings, min_co, max_co, 'Buildings')
 
     # Buildings
-    print('META-START:{"buildingCount":%d}:META-END\n' % (len(buildings)))
-    if joined_buildings:
+    # print('META-START:{"buildingCount":%d}:META-END\n' % (len(buildings)))
+    if len(buildings):
         t = time.clock()
-        extrude_building(joined_buildings, BUILDING_HEIGHT_MM * mm_to_units)
-        fatten(joined_buildings)
+        depress_buildings(buildings)
+        # extrude_building(joined_buildings, BUILDING_HEIGHT_MM * mm_to_units)
+        # fatten(joined_buildings)
         print("processing %d buildings took %.2f" % (len(buildings), time.clock() - t))
 
     # Waters
@@ -803,9 +814,19 @@ def process_objects(min_x, min_y, max_x, max_y, scale, no_borders):
         for water in inner_water_areas:
             water_wave_pattern(water, WATER_AREA_DEPTH_MM * mm_to_units, scale)
         join_objects(inner_water_areas, 'InnerWaterAreas')
-    if len(surfaces):
-        for surface in surfaces:
-            clip_object_to_map(surface, min_co, max_co)
+
+    for surface in surfaces:
+        clip_object_to_map(surface, min_co, max_co)
+
+    # base is already created, so remove base surfaces
+    for surface in surfaces:
+        if surface.name.startswith('SurfaceArea@0'):
+            surface.select = True
+    bpy.ops.object.delete()
+
+    for other in other_clippables:
+        print("Clipping:", other.name)
+        clip_object_to_map(other, min_co, max_co)
 
     print("processing waters took %.2f" % (time.clock() - t))
 
@@ -828,7 +849,11 @@ def make_tactile_map(args):
     print('min x: {0}, min y: {1}, max_x: {2}, max_y: {3}'.format(min_x, min_y, max_x, max_y))
     # Create the support cube and borders
     base_cube = create_bounds(min_x, min_y, max_x, max_y, args.scale, args.no_borders)
-    process_objects(min_x, min_y, max_x, max_y, args.scale, args.no_borders)
+    min_z = min(x.co[2] for x in base_cube.data.vertices)
+    max_z = 0
+    bpy.ops.object.select_all(action='SELECT')
+    bpy.ops.object.transform_apply(location=True, scale=True)
+    process_objects(min_x, min_y, max_x, max_y, min_z, max_z, args.scale, args.no_borders)
     print("process_objects() took " + (str(time.clock() - t)))
 
     # Add marker(s)
@@ -846,124 +871,6 @@ def export_blend_file(blend_path):
 def export_stl_file(stl_path, scale):
     bpy.ops.object.select_all(action='SELECT')
     bpy.ops.export_mesh.stl(filepath=stl_path, check_existing=False, axis_forward='Y', axis_up='Z', global_scale=(1000 / scale))
-
-def depress_buildings(base):
-    z_max_base = max(v.co[2] for v in base.data.vertices)
-    bpy.ops.object.mode_set(mode = 'OBJECT')
-    bpy.ops.object.select_all(action='DESELECT')
-    buildings = [o for o in bpy.context.scene.objects if o.name.startswith('Building') and 'Entrance' not in o.name]
-    building_bases = {b.name: None for b in buildings}
-    for building in buildings:
-        # remove faces
-        bpy.ops.object.mode_set(mode = 'OBJECT')
-        bpy.ops.object.select_all(action='DESELECT')
-        building.select = True
-        bpy.context.scene.objects.active = building
-        bpy.ops.object.mode_set(mode = 'EDIT')
-        bpy.ops.mesh.dissolve_limited()
-        bpy.ops.mesh.delete(type='ONLY_FACE')
-        building.select = False
-
-        bpy.ops.object.mode_set(mode = 'OBJECT')
-        bpy.ops.object.select_all(action='DESELECT')
-
-        # identify base vertices
-        def is_base_vertex(z_min, vertex):
-            return abs(vertex.co[2] - z_min) < 0.1
-
-        vertices = building.data.vertices
-        z_min = min(v.co[2] for v in vertices)
-        base_vertices = [v for v in vertices if is_base_vertex(z_min, v)]
-        other_vertices = [v for v in vertices if not is_base_vertex(z_min, v)]
-
-        building_bases[building.name] = [(v.co[0], v.co[1], v.co[2]) for v in base_vertices]
-
-        # remove all other vertices
-        sel_mode = bpy.context.tool_settings.mesh_select_mode
-        bpy.context.tool_settings.mesh_select_mode = [True, False, False]
-        bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
-
-        for v in other_vertices:
-            v.select = True
-
-        bpy.ops.object.mode_set(mode='EDIT', toggle=False)
-        bpy.ops.mesh.delete(type='VERT')
-
-        building.location += Vector((0, 0, 5))
-
-        print('extruding')
-
-        # extrude building down
-        bpy.ops.object.mode_set(mode = 'OBJECT')
-        bpy.ops.object.select_all(action='DESELECT')
-        bpy.context.scene.objects.active = building
-        bpy.ops.object.mode_set(mode = 'EDIT')
-        bpy.ops.mesh.select_all(action='SELECT')
-        bpy.ops.mesh.extrude_region_move(TRANSFORM_OT_translate={ "value": (0.0, 0.0, -(5 + base.dimensions[2])) })
-
-        bpy.context.tool_settings.mesh_select_mode = sel_mode
-
-        bpy.ops.object.mode_set(mode = 'OBJECT')
-        bpy.ops.object.select_all(action='DESELECT')
-
-    # join all buildings to base
-    bpy.ops.object.mode_set(mode = 'OBJECT')
-    bpy.ops.object.select_all(action='DESELECT')
-    base.select = True
-    bpy.context.scene.objects.active = base
-    for b in buildings:
-        b.select = True
-    bpy.ops.object.join()
-
-    # intersect the joined buildigns with the base
-    bpy.context.scene.objects.active = base
-    bpy.ops.object.mode_set(mode = 'EDIT')
-    bpy.ops.mesh.intersect()
-    bpy.ops.mesh.select_mode(type="VERT")
-    bpy.ops.mesh.select_all(action = 'DESELECT')
-
-    bpy.ops.object.mode_set(mode = 'OBJECT')
-
-    # remove vertices above base
-    for v in base.data.vertices:
-        if v.co[2] > 4:
-            v.select = True
-    bpy.ops.object.mode_set(mode = 'EDIT')
-    bpy.ops.mesh.delete(type='VERT')
-
-    # for name,base_vertices in building_bases.items():
-    #     print(">>>", name, "base vertices")
-    #     for v in base_vertices:
-    #         print(v)
-
-    # delete faces of building outlines
-    def get_building_face(face_verts, building_bases):
-        # do all vertices of a face lie on the same building base?
-        for name,base_verts in building_bases.items():
-            if len(face_verts) > len(base_verts):
-                continue
-            matches = 0
-            for f in face_verts:
-                match = False
-                for b in base_verts:
-                    if abs(f[0] - b[0]) < 0.0001 and abs(f[1] - b[1]) < 0.0001 and abs(f[2] - b[2]) < 1:
-                        match = True
-                if match:
-                    matches += 1
-            if matches == len(face_verts):
-                return name
-        return None
-
-    bpy.ops.object.mode_set(mode = 'OBJECT')
-    bpy.context.tool_settings.mesh_select_mode = [False, False, True]
-    for f in base.data.polygons:
-        face_verts = [base.data.vertices[i].co for i in f.vertices]
-        building = get_building_face(face_verts, building_bases)
-        if building is not None:
-            f.select = True
-
-    bpy.ops.object.mode_set(mode = 'EDIT')
-    bpy.ops.mesh.delete(type='ONLY_FACE')
 
 def raise_roads(scale):
     roads = [o for o in bpy.context.scene.objects if o.name.startswith('Road')]
