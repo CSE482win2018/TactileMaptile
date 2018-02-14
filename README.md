@@ -38,7 +38,7 @@ export FLASK_APP="server.py"
 export FLASK_DEBUG=1
 ```
 
-Run the server with `flask run`. By default it runs on port 5000.
+Set up the database with `flask initdb`, and run the server with `flask run`. By default it runs on port 5000.
 
 ### Generating maps
 
