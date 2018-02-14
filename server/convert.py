@@ -7,6 +7,7 @@ from collections import namedtuple
 import re
 import time
 import json
+import argparse
 
 ROAD_HEIGHT_CAR_MM = 0.82 # 3 x 0.25-0.3mm layers
 ROAD_HEIGHT_PEDESTRIAN_MM = 1.5
@@ -23,6 +24,11 @@ MARKER_HEIGHT_MM = BUILDING_HEIGHT_MM + 2
 MARKER_RADIUS_MM = MARKER_HEIGHT_MM * 0.5
 
 scene_data = None
+verbose = False
+
+def debug_print(*args, **kwargs):
+    if verbose:
+        print(*args, file=sys.stdout, **kwargs)
 
 def get_obj_bounds(obj):
     me = obj.data
@@ -157,9 +163,9 @@ def export_svg(base_path, args):
             elif ob.name.startswith('Building'):
                 buildings.append(ob)
             else:
-                print("UNHANDLED TYPE IN SVG CREATION: " + ob.name)
+                debug_print("UNHANDLED TYPE IN SVG CREATION: " + ob.name)
         except Exception as e:
-            print("SVG export failed {}: {}".format(ob.name, str(e)))
+            debug_print("SVG export failed {}: {}".format(ob.name, str(e)))
 
     # White background
     dwg.add(dwg.rect(insert=(min_x - 5, min_y - 5 - one_cm_units), size=(max_x - min_x + 10, max_y - min_y + 10 + one_cm_units), fill=rgb(100, 100, 100)))
@@ -188,7 +194,7 @@ def export_svg(base_path, args):
             if ob.name.startswith('Road') or ob.name.startswith('Rail') or ob.name.startswith('Waterway') or ob.name.startswith('River'):
                 add_road_overlay_object(dwg, main_g, ob)
         except Exception as e:
-            print("SVG export failed2 {}: {}".format(ob.name, str(e)))
+            debug_print("SVG export failed2 {}: {}".format(ob.name, str(e)))
 
     # Add north marker to top-right corner
     g = dwg.g(fill='black')
@@ -202,7 +208,7 @@ def export_svg(base_path, args):
     dwg.add(g)
 
     dwg.save()
-    print("creating SVG took " + (str(time.clock() - t)))
+    debug_print("creating SVG took " + (str(time.clock() - t)))
 
 def create_cube(min_x, min_y, max_x, max_y, min_z, max_z):
     bpy.ops.mesh.primitive_cube_add()
@@ -266,7 +272,7 @@ def remove_everything():
 def import_obj_file(obj_path):
     t = time.clock()
     bpy.ops.import_scene.obj(filepath=obj_path, axis_forward='X', axis_up='Y')
-    print("importing STL took " + (str(time.clock() - t)))
+    debug_print("importing STL took " + (str(time.clock() - t)))
 
 # Extrude floor to a flat-roofed building
 def extrude_building(ob, height):
@@ -279,7 +285,7 @@ def extrude_building(ob, height):
 
 def clip_object_to_map(ob, min_co, max_co):
     try:
-        #print("Clipping {}".format(ob.name))
+        #debug_print("Clipping {}".format(ob.name))
         bpy.context.scene.objects.active = ob
         bpy.ops.object.mode_set(mode = 'EDIT')
 
@@ -298,7 +304,7 @@ def clip_object_to_map(ob, min_co, max_co):
         bpy.ops.object.mode_set(mode = 'OBJECT')
         return True
     except Exception as e:
-        warning("Failed to clip {}: {}".format(ob.name, str(e)))
+        debug_print("Failed to clip {}: {}".format(ob.name, str(e)))
         bpy.ops.object.mode_set(mode = 'OBJECT')
         bpy.ops.object.select_all(action='DESELECT')
         ob.select = True
@@ -306,7 +312,7 @@ def clip_object_to_map(ob, min_co, max_co):
         try:
             bpy.ops.object.delete()
         except Exception as e:
-            print("Failed to remove {}: {}".format(ob.name, str(e)))
+            debug_print("Failed to remove {}: {}".format(ob.name, str(e)))
         return False
 
 def join_selected(name):
@@ -326,6 +332,7 @@ def join_objects(objects, name):
 
 def join_and_clip(objects, min_co, max_co, name):
     if len(objects) == 0:
+        
         return None
     combined = join_objects(objects, name)
     clip_object_to_map(combined, min_co, max_co)
@@ -428,7 +435,7 @@ def join_matching_edges(ob, min_x, min_y, max_x, max_y):
             for linked_e in v.link_edges:
                 verts.extend((vv for vv in linked_e.verts if vv != e.verts[0] and vv != e.verts[1]))
         if len(verts) != 2:
-            #print("edge has non-2 adjacent verts: " + str(len(verts)))
+            #debug_print("edge has non-2 adjacent verts: " + str(len(verts)))
             return None
         return ((verts[0].co[0] + verts[1].co[0]) / 2, \
                 (verts[0].co[1] + verts[1].co[1]) / 2, \
@@ -452,9 +459,9 @@ def join_matching_edges(ob, min_x, min_y, max_x, max_y):
             angle = ce.into_edge.angle(edge_v)
             if abs(angle - radians_90degrees) > radians_90degrees / 9:
                 multiplier = 1 / math.sin(angle)
-                print("angle: %f, mult: %f" % (angle * (90 / radians_90degrees), multiplier))
+                debug_print("angle: %f, mult: %f" % (angle * (90 / radians_90degrees), multiplier))
                 if multiplier > 3:
-                    print("abnormally high multiplier, not lengthening")
+                    debug_print("abnormally high multiplier, not lengthening")
                 else:
                     verts[0].co = ce.center + (verts[0].co - ce.center) * multiplier
                     verts[1].co = ce.center + (verts[1].co - ce.center) * multiplier
@@ -509,7 +516,7 @@ def join_matching_edges(ob, min_x, min_y, max_x, max_y):
             if not oe.welded and lmin < oe.length < lmax and sinAngle(ce.e, oe.e) < at:
                 turn_angle = ce.into_edge.angle(-oe.into_edge)
                 if turn_angle > math.pi * 0.6: # pi * 0.5 is 90%
-                    #print("not merging edges (%s, %s) pointing to opposite directions, angle is %f" % (ce.e, oe.e, turn_angle))
+                    #debug_print("not merging edges (%s, %s) pointing to opposite directions, angle is %f" % (ce.e, oe.e, turn_angle))
                     continue
                 matches.append(oe)
                 oe.welded = True
@@ -529,7 +536,7 @@ def join_matching_edges(ob, min_x, min_y, max_x, max_y):
             mark_all_t_junction_edges_welded(ce)
             mark_all_t_junction_edges_welded(matches[0])
 
-    print("%s: melding %d out of %d edges" % (ob.name, len(to_weld) / 2, len(bm.edges)))
+    debug_print("%s: melding %d out of %d edges" % (ob.name, len(to_weld) / 2, len(bm.edges)))
     bmesh.ops.weld_verts(bm, targetmap = to_weld)
     bmesh.update_edit_mesh(bpy.context.object.data ,True)
     bpy.ops.object.mode_set(mode = 'OBJECT')
@@ -559,7 +566,7 @@ def do_ways(ways, height, min_x, min_y, max_x, max_y):
     join_matching_edges(ways, min_x, min_y, max_x, max_y)
     raise_ob(ways, height)
     fatten(ways)
-    print("processing %s took %.2f" % (ways.name, time.clock() - t))
+    debug_print("processing %s took %.2f" % (ways.name, time.clock() - t))
 
 def do_road_areas(roads, height):
     if roads == None:
@@ -568,12 +575,12 @@ def do_road_areas(roads, height):
     decimate(roads)
     raise_ob(roads, height)
     fatten(roads)
-    #print("processing %s took %.2f" % (roads.name, time.clock() - t))
+    #debug_print("processing %s took %.2f" % (roads.name, time.clock() - t))
 
 def depress_buildings(buildings):
     base = bpy.context.scene.objects['Base']
     z_max_base = max(v.co[2] for v in base.data.vertices)
-    print('z_max_base:', z_max_base)
+    debug_print('z_max_base:', z_max_base)
     bpy.ops.object.mode_set(mode = 'OBJECT')
     bpy.ops.object.select_all(action='DESELECT')
     building_bases = {b.name: None for b in buildings}
@@ -615,7 +622,7 @@ def depress_buildings(buildings):
 
         building.location += mathutils.Vector((0, 0, 5))
 
-        print('extruding')
+        debug_print('extruding')
 
         # extrude building down
         bpy.ops.object.mode_set(mode = 'OBJECT')
@@ -656,14 +663,14 @@ def depress_buildings(buildings):
     bpy.ops.mesh.delete(type='VERT')
 
     for name,base_vertices in building_bases.items():
-        print(">>>", name, "base vertices")
+        debug_print(">>>", name, "base vertices")
         for v in base_vertices:
-            print(v)
+            debug_print(v)
 
     # delete faces of building outlines
     def get_building_face(face_verts, building_bases):
         # do all vertices of a face lie on the same building base?
-        print("Checking: ", face_verts)
+        debug_print("Checking: ", face_verts)
         for name,base_verts in building_bases.items():
             if len(face_verts) > len(base_verts):
                 continue
@@ -685,7 +692,7 @@ def depress_buildings(buildings):
         face_verts = [base.data.vertices[i].co for i in f.vertices]
         building = get_building_face(face_verts, building_bases)
         if building is not None:
-            print("<><><> building:", building)
+            debug_print("<><><> building:", building)
             f.select = True
 
     bpy.ops.object.mode_set(mode = 'EDIT')
@@ -693,8 +700,8 @@ def depress_buildings(buildings):
     bpy.ops.mesh.select_all(action = 'DESELECT')
 
     # remove all vertices outside of the base
-    bpy.ops.object.mode_set(mode = 'OBJECT')
-    bpy.context.tool_settings.mesh_select_mode = [True, False, False]
+    # bpy.ops.object.mode_set(mode = 'OBJECT')
+    # bpy.context.tool_settings.mesh_select_mode = [True, False, False]
 
 def process_objects(min_x, min_y, max_x, max_y, min_z, max_z, scale, no_borders):
     t = time.clock()
@@ -757,9 +764,9 @@ def process_objects(min_x, min_y, max_x, max_y, min_z, max_z, scale, no_borders)
                 elif ob.name.startswith('Water') or ob.name.startswith('AreaFountain'):
                     inner_water_areas.append(ob)
                 else:
-                    print("UNHANDLED INNER OBJECT TYPE: " + ob.name)
+                    debug_print("UNHANDLED INNER OBJECT TYPE: " + ob.name)
             elif n_outside == n_total and ob.name != 'Base':
-                print('deleting:', ob.name)
+                debug_print('deleting:', ob.name)
                 deleteables.append(ob)
             else:
                 if ob.name.startswith('Waterway') or ob.name.startswith('River'):
@@ -769,7 +776,7 @@ def process_objects(min_x, min_y, max_x, max_y, min_z, max_z, scale, no_borders)
                 elif not ob.name.startswith('Base') and not ob.name.startswith('Corner') and not ob.name.startswith('Borders'):
                     other_clippables.append(ob)
 
-    print("initial steps took %.2f" % (time.clock() - t))
+    debug_print("initial steps took %.2f" % (time.clock() - t))
 
     # Delete
     t = time.clock()
@@ -778,7 +785,7 @@ def process_objects(min_x, min_y, max_x, max_y, min_z, max_z, scale, no_borders)
         for ob in deleteables:
             ob.select = True
         bpy.ops.object.delete()
-        #print("deleting %d objects took %.2f" % (len(deleteables), time.clock() - t))
+        #debug_print("deleting %d objects took %.2f" % (len(deleteables), time.clock() - t))
 
     # Pre-join stuff for performance
     joined_roads_car = join_and_clip(roads_car, min_co, max_co, 'CarRoads')
@@ -789,13 +796,13 @@ def process_objects(min_x, min_y, max_x, max_y, min_z, max_z, scale, no_borders)
     # joined_buildings = join_and_clip(buildings, min_co, max_co, 'Buildings')
 
     # Buildings
-    # print('META-START:{"buildingCount":%d}:META-END\n' % (len(buildings)))
+    # debug_print('META-START:{"buildingCount":%d}:META-END\n' % (len(buildings)))
     if len(buildings):
         t = time.clock()
         depress_buildings(buildings)
         # extrude_building(joined_buildings, BUILDING_HEIGHT_MM * mm_to_units)
         # fatten(joined_buildings)
-        print("processing %d buildings took %.2f" % (len(buildings), time.clock() - t))
+        debug_print("processing %d buildings took %.2f" % (len(buildings), time.clock() - t))
 
     # Waters
     t = time.clock()
@@ -825,10 +832,10 @@ def process_objects(min_x, min_y, max_x, max_y, min_z, max_z, scale, no_borders)
     bpy.ops.object.delete()
 
     for other in other_clippables:
-        print("Clipping:", other.name)
+        debug_print("Clipping:", other.name)
         clip_object_to_map(other, min_co, max_co)
 
-    print("processing waters took %.2f" % (time.clock() - t))
+    debug_print("processing waters took %.2f" % (time.clock() - t))
 
     # Rails
     if clipped_rails != None:
@@ -846,7 +853,7 @@ def make_tactile_map(args):
     bpy.ops.object.transform_apply(rotation=True)
     bpy.context.scene.update()
     min_x, min_y, max_x, max_y = get_scene_bounds()
-    print('min x: {0}, min y: {1}, max_x: {2}, max_y: {3}'.format(min_x, min_y, max_x, max_y))
+    debug_print('min x: {0}, min y: {1}, max_x: {2}, max_y: {3}'.format(min_x, min_y, max_x, max_y))
     # Create the support cube and borders
     base_cube = create_bounds(min_x, min_y, max_x, max_y, args.scale, args.no_borders)
     min_z = min(x.co[2] for x in base_cube.data.vertices)
@@ -854,7 +861,7 @@ def make_tactile_map(args):
     bpy.ops.object.select_all(action='SELECT')
     bpy.ops.object.transform_apply(location=True, scale=True)
     process_objects(min_x, min_y, max_x, max_y, min_z, max_z, args.scale, args.no_borders)
-    print("process_objects() took " + (str(time.clock() - t)))
+    debug_print("process_objects() took " + (str(time.clock() - t)))
 
     # Add marker(s)
     if args.marker1 != None:
@@ -881,7 +888,12 @@ def raise_roads(scale):
         bpy.ops.object.mode_set(mode='EDIT')
         bpy.ops.mesh.extrude_region_move(TRANSFORM_OT_translate={ "value": (0.0, 0.0, road_height) })
 
-def convert_osm(osm_obj_path, osm_json_path, osm_blend_path, osm_stl_path):
+def convert_osm(args):
+    osm_obj_path = args.obj_path
+    osm_json_path = args.json_path
+    osm_blend_path = args.blend_path
+    osm_stl_path = args.stl_path
+
     import_obj_file(osm_obj_path)
     bpy.ops.object.select_all(action='SELECT')
     bpy.ops.object.transform_apply(rotation=True)
@@ -900,12 +912,24 @@ def convert_osm(osm_obj_path, osm_json_path, osm_blend_path, osm_stl_path):
     export_blend_file(osm_blend_path)
     export_stl_file(osm_stl_path, args.scale)
 
-def main(argv):
-    if len(argv) != 4:
-        print("usage: convert.py [path to input .obj file] [path to input .json file] [path to output .blend file] [path to output .stl file]")
-        return
+def do_cmdline():
+    parser = argparse.ArgumentParser(description='''Read an OSM map as a .obj file, modify it to a tactile map, and export as .stl''')
+    parser.add_argument('--scale', metavar='N', type=int, help="scale to export STL in, 4000 would mean one Blender unit (meter) = 0.25mm (STL file unit is normally mm)")
+    parser.add_argument('-v', '--verbose', action='store_true', help="debug prints")
+    parser.add_argument('--size', metavar='METERS', type=float, help="print size in cm")
+    parser.add_argument('-s', '--stl-to-stdout', action='store_true', help="output stl file to stdout")
+    parser.add_argument('obj_path', help='.obj file to use as input')
+    parser.add_argument('json_path', help='.obj file to use as input')
+    parser.add_argument('blend_path', help='.blend file to output')
+    parser.add_argument('stl_path', help='.stl file to output')
+    args = parser.parse_args(sys.argv[sys.argv.index("--") + 1:])
+    return args
 
-    convert_osm(argv[0], argv[1], argv[2], argv[3])
+def main(argv):
+    global verbose
+    args = do_cmdline()
+    verbose = args.verbose
+    convert_osm(args)
 
 if __name__ == '__main__':
     main(sys.argv[sys.argv.index('--') + 1:])
