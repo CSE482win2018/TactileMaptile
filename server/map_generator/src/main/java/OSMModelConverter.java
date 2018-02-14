@@ -30,15 +30,12 @@ public class OSMModelConverter {
         String osmPath, objPath, jsonPath;
         if (args.length != 3) {
             System.out.println("Usage: OSMModelConverter [path to input .osm file] [path to output .obj file] [path to output .json file]");
-            // return;
-            osmPath = "C:/Users/jacka/Documents/accessibility/TactileMaptile/server/map_files/map.osm";
-            objPath = "C:/Users/jacka/Documents/accessibility/TactileMaptile/server/map_files/map.obj";
-            jsonPath = "C:/Users/jacka/Documents/accessibility/TactileMaptile/server/map_files/map.json";
-        } else {
-            osmPath = args[0];
-            objPath = args[1];
-            jsonPath = args[2];
-        }
+            return;
+        } 
+        osmPath = args[0];
+        objPath = args[1];
+        jsonPath = args[2];
+        
         Configuration config = new BaseConfiguration();
         OSMDataReader dataReader = new OSMFileReader(new File(osmPath));
         ConversionFacade cf = new ConversionFacade();

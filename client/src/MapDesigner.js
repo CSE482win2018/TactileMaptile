@@ -10,7 +10,8 @@ class MapDesigner extends Component {
         width: null,
         height: null
       },
-      showPreview: false
+      showPreview: false,
+      stlId: null
     };
 
     this.handleDesignSubmit = this.handleDesignSubmit.bind(this);
@@ -39,17 +40,21 @@ class MapDesigner extends Component {
             <legend>Map options</legend>
             <div className="field">
               <label htmlFor="map-width">Map size, east to west (kilometers)</label>
-              <input id="map-width" type="number" min="1" max="5" placeholder="1" onChange={event => this.setState({options: {...this.state.options, width: +event.target.value}})} />
+              <input id="map-width" type="number" min="0" max="5" placeholder="1"  step="0.1" onChange={event => this.setState({options: {...this.state.options, width: +event.target.value}})} />
             </div>
             <div className="field">
               <label htmlFor="map-height">Map size, north to south (kilometers)</label>
-              <input id="map-height" type="number" min="1" max="5" placeholder="1" onChange={event => this.setState({options: {...this.state.options, height: +event.target.value}})} />
+              <input id="map-height" type="number" min="0" max="5" placeholder="1"  step="0.1" onChange={event => this.setState({options: {...this.state.options, height: +event.target.value}})} />
             </div>
             <button type="submit" className="button color-white background-secondary">Create map</button>
           </fieldset>
         </form>
         {this.state.showPreview && (
-          <MapPreview mapStlUrl="/api/map/stl" />
+          this.state.stlId ? (
+           <MapPreview mapStlUrl={"/api/map/stl/" + this.state.stlId} />
+          ) : (
+            <div>LOADING</div>
+          )
         )}
       </div>
     );
@@ -58,7 +63,33 @@ class MapDesigner extends Component {
   handleDesignSubmit(event) {
     event.preventDefault();
     this.setState({
-      showPreview: true
+      showPreview: true,
+      stlId: null
+    });
+    let data = {
+      lng: this.props.address.geometry.location.lng(),
+      lat: this.props.address.geometry.location.lat(),
+      width: this.state.options.width,
+      height: this.state.options.height
+    }
+    let formData = new URLSearchParams();
+    Object.keys(data).forEach(key => {
+      formData.append(key, data[key]);
+    });
+    console.log(formData);
+    fetch('/api/map', {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: formData.toString(), // must match 'Content-Type' header
+      method: 'POST', // *GET, PUT, DELETE, etc.
+    })
+    .then(response => response.json())
+    .then(json => {
+      console.log(json)
+      this.setState({
+        stlId: json.id
+      });
     });
   }
 }

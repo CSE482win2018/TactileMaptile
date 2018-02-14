@@ -25,7 +25,7 @@ class LocationForm extends Component {
     let searchButton = !this.state.isGeocoding ? (
       <button type="submit" className={"button swatch color-white background-primary"}>Search</button>
     ) : (
-      <button type="submit" className={ "button spinner swatch color-white background-primary"}></button>
+      <button type="submit" className={ "button spinner swatch color-white background-primary"}/>
     );
     return (
       <div>

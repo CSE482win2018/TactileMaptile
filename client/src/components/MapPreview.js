@@ -15,7 +15,7 @@ class MapPreview extends Component {
 
   render() {
     return (
-      <div width="680px" height="500px" ref={(element) => { this.element = element; }} />
+      <div style={{'width': '680px', 'height': '500px'}} ref={(element) => { this.element = element; }} />
     );
   }
 
@@ -52,7 +52,7 @@ class MapPreview extends Component {
       geometry.computeBoundingBox();  // otherwise geometry.boundingBox will be undefined
       var diameter = Math.max(geometry.boundingBox.max.x, geometry.boundingBox.max.y);
       camera.position.z = diameter * 2.375;
-      camera.position.y = camera.position.z * -0.04;
+      // camera.position.y = camera.position.z * -0.04;
 
       // Center geometry into the origin
       geometry.translate(- diameter / 2, - diameter / 2, 0);
@@ -74,7 +74,7 @@ class MapPreview extends Component {
       var startTime = getNowMs();
       function render() {
         requestAnimationFrame( render );
-        mesh.rotation.z = (getNowMs() - startTime) / -2000;
+        // mesh.rotation.z = (getNowMs() - startTime) / -2000;
         renderer.render( scene, camera );
       }
       render();

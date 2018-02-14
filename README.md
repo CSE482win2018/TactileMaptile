@@ -9,17 +9,22 @@ This is a project as part of the University of Washington's [CSE482: Capstone So
 ## Local Development
 
 ### Web
-TBD
+
+Dependencies:
+* [node.js](https://nodejs.org/en/)
+* [Yarn](https://yarnpkg.com/en/)
+
+Run the web app from the `client` directory, first running `yarn install`.
+
+To watch changes, run `yarn start`. To create a production build, run `yarn build`. The app will by default run at `http://localhost:3000`.
 
 ### Generating maps
 
-Prerequisite software:
+Dependencies:
 * [Java JRE or JDK (at least 7)](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
 * [Gradle](https://gradle.org/install/)
 * [Blender](https://www.blender.org/download/)
 * [Python 3](https://www.python.org/downloads/)
-
-After installing everything, `java`, `gradle`, `blender`, and `python3` (or for Windows, `py -3`) should all be available on your system's `PATH`.
 
 Creating a map goes as follows:
 * An `.osm` file is the input, which describes an area of the world. A .osm file can be download for an arbitary location from [OpenStreetMap](http://www.openstreetmap.org).
@@ -27,19 +32,25 @@ Creating a map goes as follows:
 * Blender converts the `.obj` file to a `.stl` file and can change features of the map such as its size as well as adding, removing, and modifying features of the map.
 * A slicer program converts the `.stl` file into a file that a 3D printer can use.
 
-To build the Java project, run `gradle installDist`.
+`cd` to `server/map_generator`, and build the converter with `gradle installDist`.
 
-To convert a `.osm` file to a `.obj` file, run: 
+To convert a `.osm` file to a `.obj` file, run:
+
 ```
-gradle run -PappArgs="['path to input .osm file', 'path to output .obj file']"
+build/install/map_generator/bin/map_generator [path to input .osm file] [path to output .obj file] [path to output .json file]
 ```
 
-For example, `gradle run -PappArgs="['data/map.osm', 'data/map.obj']"`.
+You can also run with gradle, which will build the project first:
+```
+gradle run -PappArgs="['path to input .osm file', 'path to output .obj file', 'path to output .json file']"
+```
 
 To create a `.blend` file from the resulting `.obj` file, run:
 
 ```
-blender -b -P convert.py -- [path to input .obj file] -o [path to output .blend file]
+blender -b -P convert.py -- --scale [scale] --size [size] [path to input .obj file] [path to input .json file] [path to input .blend file] [path to output .stl file]
 ```
+
+The `.obj` and `.json` files for input are the ones created in the previous step.
 
 You can then open up Blender and look at the resulting map.

@@ -1,3 +1,7 @@
+html, body, body > *, main {
+  height: 100%;
+}
+
 .App-header {
   /* background-color: #222; */
   text-align: left;
@@ -10,7 +14,7 @@
 }
 
 .form-area {
-  padding: 30px 0;
+  margin: 30px 0;
 }
 
 /* .App {
