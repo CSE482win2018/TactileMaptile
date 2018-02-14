@@ -1,0 +1,35 @@
+{
+  "name": "create-react-app",
+  "version": "0.1.0",
+  "private": true,
+  "watch": {
+    "patterns": [
+      "src"
+    ],
+    "extensions": [
+      "css",
+      "js"
+    ]
+  },
+  "homepage": "http://students.washington.edu/jackarms/tactilemaptile",
+  "dependencies": {
+    "react": "^16.2.0",
+    "react-dom": "^16.2.0",
+    "react-google-maps": "^9.4.5",
+    "react-router-dom": "^4.2.2",
+    "react-scripts": "1.1.0",
+    "three": "^0.89.0",
+    "three-stl-loader": "^1.0.6"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject",
+    "watch": "npm-watch watch"
+  },
+  "devDependencies": {
+    "npm-watch": "^0.3.0"
+  },
+  "proxy": "http://localhost:5000/"
+}

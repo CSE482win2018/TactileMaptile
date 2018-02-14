@@ -1,0 +1,4 @@
+build
+.gradle
+map_files/*.obj
+map_files/*.stl
