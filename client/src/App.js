@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 
-import Home from './Home';
-import MapDesigner from './MapDesigner';
+import Home from './components/Home';
+import MapDesigner from './components/MapDesigner';
 import { Route, Switch, withRouter } from 'react-router-dom';
 
 import normalTheme from './App.css';

@@ -1,6 +1,6 @@
 import React, { Component } from "react";
 import { withRouter, Link } from "react-router-dom";
-import MapPreview from './components/MapPreview';
+import MapPreview from './MapPreview';
 
 class MapDesigner extends Component {
   constructor(props) {
