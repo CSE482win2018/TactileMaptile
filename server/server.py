@@ -1,5 +1,5 @@
 import os
-from flask import Flask, g, request, current_app, jsonify, abort, send_file
+from flask import Flask, g, request, current_app, jsonify, abort, send_file, send_from_directory
 import sqlite3
 import math
 from werkzeug.exceptions import BadRequest
@@ -46,7 +46,7 @@ def register_teardowns(app):
         if hasattr(g, 'sqlite_db'):
             g.sqlite_db.close()
       
-app = Flask(__name__)
+app = Flask(__name__, static_folder='react_app/build')
 app.config.update(dict(
     DATABASE=os.path.join(app.root_path, 'flask.db'),
     DEBUG=True,
@@ -59,6 +59,18 @@ app.config.from_envvar('FLASKR_SETTINGS', silent=True)
 register_cli(app)
 register_teardowns(app)
 
+# Serve React App
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve(path):
+    if(path == ""):
+        return send_from_directory('react_app/build', 'index.html')
+    else:
+        if(os.path.exists("react_app/build/" + path)):
+             return send_from_directory('react_app/build', path)
+        else:
+             return send_from_directory('react_app/build', 'index.html')
+
 @app.route('/api/map', methods=['POST'])
 def create_map():
     print('creatting map')
@@ -66,8 +78,8 @@ def create_map():
     width = float(request.form['width'])
     height = float(request.form['height'])
     lat = float(request.form['lat'])
-    lng = float(request.form['lng'])
-
+    lng = float(request.form['lng'])        
+             
     miles_per_lat = 69.172
     miles_per_lng = miles_per_lat * math.cos(math.radians(lat))
 
@@ -93,9 +105,12 @@ def create_map():
     stl_path = obj_out = os.path.join(os.getcwd(), 'map_files', 'map.stl').replace("\\", "/")
 
     # convert to obj
-    map_generator_dir = os.path.join(os.getcwd(), 'map_generator', 'build', 'install', 'map_generator', 'bin').replace("\\", "/")
+    map_generator_dir = os.path.join(os.getcwd(), 'map_generator', 'build', 'install', 'map_generator', 'bin', 'map_generator').replace("\\", "/")
+    print(map_generator_dir)
     args = [osm_path, obj_path, json_path]
-    obj_convert_result = subprocess.run(['map_generator'] + args, cwd=map_generator_dir, shell=True)
+    a = [map_generator_dir] + args
+    print(a)
+    obj_convert_result = subprocess.run(' '.join(a), shell=True)
     print(obj_convert_result.returncode)
 
     blender_args = ['--scale', '1000', '--size', '15', obj_path, json_path, blend_path, stl_path]
