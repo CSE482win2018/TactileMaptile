@@ -1,6 +1,8 @@
 import React, { Component } from "react";
 import { withRouter, Link } from "react-router-dom";
-import MapPreview from './MapPreview';
+import MapPreview3D from './MapPreview3D';
+import '../App.css';
+import '../turret.css';
 
 class MapDesigner extends Component {
   constructor(props) {
@@ -51,7 +53,7 @@ class MapDesigner extends Component {
         </form>
         {this.state.showPreview && (
           this.state.stlId ? (
-           <MapPreview mapStlUrl={"/api/map/stl/" + this.state.stlId} />
+           <MapPreview3D mapStlUrl={"/api/map/stl/" + this.state.stlId} />
           ) : (
             <div>LOADING</div>
           )

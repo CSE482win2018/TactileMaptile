@@ -1,8 +1,9 @@
 import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
 import LocationForm from './LocationForm';
-import * as config from './config.json';
-import './App.css';
+import * as config from '../config.json';
+import '../App.css';
+import '../turret.css';
 
 class Home extends Component {
   constructor(props) {
@@ -34,10 +35,12 @@ class Home extends Component {
           Design your own tactile maps to explore and navigate.
         </div>
         <div className="form-area">
-          <LocationForm 
-          setMapAddress={this.props.setMapAddress}
-          googleMapURL={config.googleMapsApiUri}
-          loadingElement={<div/>} />
+          <LocationForm
+            data={this.props.data}
+            updateData={this.props.updateData}
+            setMapAddress={this.props.setMapAddress}
+            googleMapURL={config.googleMapsApiUri}
+            loadingElement={<div/>} />
         </div>
       </div>
     );

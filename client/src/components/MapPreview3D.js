@@ -1,8 +1,11 @@
 import React, { Component } from 'react';
 import * as THREE from 'three';
+import '../App.css';
+import '../turret.css';
+
 var STLLoader = require('three-stl-loader')(THREE);
 
-class MapPreview extends Component {
+class MapPreview3D extends Component {
   constructor(props) {
     super(props);
     console.log(THREE);
@@ -82,4 +85,4 @@ class MapPreview extends Component {
   };
 }
 
-export default MapPreview;
+export default MapPreview3D;

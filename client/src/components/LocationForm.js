@@ -1,5 +1,8 @@
 import React, { Component } from 'react';
 import { withScriptjs } from 'react-google-maps';
+import MapPreviewOl from './MapPreviewOl';
+import '../App.css';
+import '../turret.css';
 
 class LocationForm extends Component {
   constructor(props) {
@@ -7,6 +10,7 @@ class LocationForm extends Component {
     this.geocodeInput = this.geocodeInput.bind(this);
     this.handleMultipleResultsSelect = this.handleMultipleResultsSelect.bind(this);
     this.handleMultipleResultsSubmit = this.handleMultipleResultsSubmit.bind(this);
+    this.handleAddressSubmit = this.handleAddressSubmit.bind(this);
 
     this.geocoder = new window.google.maps.Geocoder();
     this.state = {
@@ -14,7 +18,7 @@ class LocationForm extends Component {
       isGeocoding: false,
       results: null,
       multipleResults: {
-        chosenResult: null,
+        chosenResultIndex: null,
         showFormError: false
       }
     }
@@ -56,17 +60,18 @@ class LocationForm extends Component {
         </div>
       );
     } else if (results.length === 1) {
-      let result = results[0];
+      let address = results[0];
       return (
         <div>
-          <form onSubmit={(event) => {event.preventDefault(); this.props.setMapAddress(result)}}>
-            <fieldset>
-              <legend>Confirm address</legend>
-              <p>Found 1 results. Hit "OK" if this is the address you want, otherwise try searching again.</p>
-              <p>Address found: {result.formatted_address}</p>
-              <button className={"button swatch color-white background-secondary"}>OK</button>
-            </fieldset>
-          </form>
+          <fieldset>
+            <legend>Confirm address</legend>
+            <p>Found 1 results. Hit "OK" if this is the address you want, otherwise try searching again.</p>
+            <p>Address found: {address.formatted_address}</p>
+            <MapPreviewOl data={this.props.data} address={address}/>
+            <form onSubmit={(event) => this.handleAddressSubmit(event, address)}>
+              <button type="submit" className={"button swatch color-white background-secondary"}>OK</button>
+            </form>
+          </fieldset>
         </div>
       );
     } else {
@@ -96,16 +101,22 @@ class LocationForm extends Component {
     }
   }
 
+  handleAddressSubmit(event, address) {
+    event.preventDefault();
+    this.props.updateData({...this.props.data, ...{address: address}});
+    this.props.setMapAddress(address);
+  }
+
   handleMultipleResultsSelect(event) {
     let multipleResults = {...this.state.multipleResults};
     let resultIndex = +event.currentTarget.value;
-    multipleResults.chosenResult = this.state.results[resultIndex];
+    multipleResults.chosenResultIndex = resultIndex;
     this.setState({multipleResults});
   }
 
   handleMultipleResultsSubmit(event) {
     event.preventDefault();
-    if (!this.state.multipleResults.chosenResult) {
+    if (!this.state.multipleResults.chosenResultIndex) {
       let multipleResults = {...this.state.multipleResults};
       multipleResults.showFormError = true;
       this.setState({multipleResults});
@@ -115,7 +126,7 @@ class LocationForm extends Component {
     let multipleResults = {...this.state.multipleResults};
     multipleResults.showFormError = false;
     this.setState({multipleResults});
-    this.props.setMapAddress(multipleResults.chosenResult);
+    this.props.setData({address: this.state.results[multipleResults.chosenResultIndex]});
   }
 
   geocodeInput(event) {
@@ -125,20 +136,40 @@ class LocationForm extends Component {
       isGeocoding: true,
       results: null
     });
-    this.geocoder.geocode({address: this.state.locationInput}, (results, status) => {
-      this.setState({
-        isGeocoding: false
-      });
-      if (status !== 'OK') {
-        console.log(`GEOCODING ERROR: ${status}`);
-        return;
-      }
 
-      console.log(results);
-      this.setState({
-        results: results
-      });
+    let results = [
+      {
+        formatted_address: "5268 19th ave NE Seattle WA 98105",
+        geometry: {
+          location: {
+            lng: () => -122.3068156,
+            lat: () => 47.6684414
+          }
+        }
+      }
+    ];
+    this.setState({
+      isGeocoding: false
     });
+    console.log(results);
+    this.setState({
+      results: results
+    });
+
+    // this.geocoder.geocode({address: this.state.locationInput}, (results, status) => {
+    //   this.setState({
+    //     isGeocoding: false
+    //   });
+    //   if (status !== 'OK') {
+    //     console.log(`GEOCODING ERROR: ${status}`);
+    //     return;
+    //   }
+
+    //   console.log(results);
+    //   this.setState({
+    //     results: results
+    //   });
+    // });
   }
 }
 
