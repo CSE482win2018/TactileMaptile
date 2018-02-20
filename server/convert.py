@@ -664,13 +664,13 @@ def depress_buildings(buildings):
 
     for name,base_vertices in building_bases.items():
         debug_print(">>>", name, "base vertices")
-        for v in base_vertices:
-            debug_print(v)
+        # for v in base_vertices:
+        #     debug_print(v)
 
     # delete faces of building outlines
     def get_building_face(face_verts, building_bases):
         # do all vertices of a face lie on the same building base?
-        debug_print("Checking: ", face_verts)
+        # debug_print("Checking: ", face_verts)
         for name,base_verts in building_bases.items():
             if len(face_verts) > len(base_verts):
                 continue
@@ -752,6 +752,8 @@ def process_objects(min_x, min_y, max_x, max_y, min_z, max_z, scale, no_borders)
         elif ob.name.startswith('Surface'):
             surfaces.append(ob)
         else:
+            if ob.name.startswith('Bridge'):
+                other_clippables.append(ob)
             n_total = len(ob.data.vertices)
             n_outside = 0
             for vert in ob.data.vertices:
@@ -808,17 +810,21 @@ def process_objects(min_x, min_y, max_x, max_y, min_z, max_z, scale, no_borders)
     # Waters
     t = time.clock()
     if len(joinable_waterways) > 0:
+        debug_print("joinable water areas:", len(joinable_waterways))
         joined_waterways = join_objects(joinable_waterways, 'JoinedWaterways')
         raise_ob(joined_waterways, WATERWAY_DEPTH_MM * mm_to_units)
     if len(clippable_waterways) > 0:
+        debug_print("clippable water ways:", len(clippable_waterways))
         clipped_waterways = join_and_clip(clippable_waterways, min_co, max_co, 'ClippedWaterways')
         raise_ob(clipped_waterways, WATERWAY_DEPTH_MM * mm_to_units)
     if len(clippable_water_areas) > 0:
+        debug_print("clippable water areas:", len(clippable_water_areas))
         for water in clippable_water_areas:
             clip_object_to_map(water, min_co, max_co)
             water_wave_pattern(water, WATER_AREA_DEPTH_MM * mm_to_units, scale)
         join_objects(clippable_water_areas, 'ClippedWaterAreas')
     if len(inner_water_areas):
+        debug_print("inner water areas:", len(inner_water_areas))
         for water in inner_water_areas:
             water_wave_pattern(water, WATER_AREA_DEPTH_MM * mm_to_units, scale)
         join_objects(inner_water_areas, 'InnerWaterAreas')
@@ -827,6 +833,7 @@ def process_objects(min_x, min_y, max_x, max_y, min_z, max_z, scale, no_borders)
         clip_object_to_map(surface, min_co, max_co)
 
     # base is already created, so remove base surfaces
+    bpy.ops.object.select_all(action='DESELECT')
     for surface in surfaces:
         if surface.name.startswith('SurfaceArea@0'):
             surface.select = True
