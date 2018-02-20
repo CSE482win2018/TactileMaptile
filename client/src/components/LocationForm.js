@@ -149,28 +149,28 @@ class LocationForm extends Component {
       }
     ];
 
-    this.setState({
-      isGeocoding: false
-    });
-    console.log(results);
-    this.setState({
-      results: results
-    });
-
-    // this.geocoder.geocode({address: this.state.locationInput}, (results, status) => {
-    //   this.setState({
-    //     isGeocoding: false
-    //   });
-    //   if (status !== 'OK') {
-    //     console.log(`GEOCODING ERROR: ${status}`);
-    //     return;
-    //   }
-
-    //   console.log(results);
-    //   this.setState({
-    //     results: results
-    //   });
+    // this.setState({
+    //   isGeocoding: false
     // });
+    // console.log(results);
+    // this.setState({
+    //   results: results
+    // });
+
+    this.geocoder.geocode({address: this.state.locationInput}, (results, status) => {
+      this.setState({
+        isGeocoding: false
+      });
+      if (status !== 'OK') {
+        console.log(`GEOCODING ERROR: ${status}`);
+        return;
+      }
+
+      console.log(results);
+      this.setState({
+        results: results
+      });
+    });
   }
 }
 
