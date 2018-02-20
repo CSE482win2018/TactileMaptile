@@ -698,6 +698,7 @@ def depress_buildings(buildings):
     bpy.ops.object.mode_set(mode = 'EDIT')
     bpy.ops.mesh.delete(type='ONLY_FACE')
     bpy.ops.mesh.select_all(action = 'DESELECT')
+    bpy.ops.object.mode_set(mode = 'OBJECT')
 
     # remove all vertices outside of the base
     # bpy.ops.object.mode_set(mode = 'OBJECT')

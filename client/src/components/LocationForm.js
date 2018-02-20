@@ -67,7 +67,7 @@ class LocationForm extends Component {
             <legend>Confirm address</legend>
             <p>Found 1 results. Hit "OK" if this is the address you want, otherwise try searching again.</p>
             <p>Address found: {address.formatted_address}</p>
-            <MapPreviewOl data={this.props.data} address={address}/>
+            <MapPreviewOl maxSize={500} data={this.props.data} address={address}/>
             <form onSubmit={(event) => this.handleAddressSubmit(event, address)}>
               <button type="submit" className={"button swatch color-white background-secondary"}>OK</button>
             </form>
@@ -148,6 +148,7 @@ class LocationForm extends Component {
         }
       }
     ];
+
     this.setState({
       isGeocoding: false
     });

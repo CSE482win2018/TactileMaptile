@@ -73,26 +73,18 @@ def serve(path):
 
 @app.route('/api/map', methods=['POST'])
 def create_map():
-    print('creatting map')
+    print('creating map')
     print(request.form)
-    width = float(request.form['width'])
-    height = float(request.form['height'])
-    lat = float(request.form['lat'])
-    lng = float(request.form['lng'])        
-             
-    miles_per_lat = 69.172
-    miles_per_lng = miles_per_lat * math.cos(math.radians(lat))
 
-    lat_width = width / miles_per_lng
-    lng_height = height / miles_per_lat
+    scale = int(request.form['scale'])
+    size = int(request.form['size'])        
+
     bounds = {
-        'min_lat': lat - lat_width/2,
-        'max_lat': lat + lat_width/2,
-        'min_lng': lng - lng_height/2,
-        'max_lng': lng + lng_height/2
+        'min_lat': float(request.form['min_lat']),  
+        'max_lat': float(request.form['max_lat']), 
+        'min_lng': float(request.form['min_lng']),
+        'max_lng': float(request.form['max_lng'])
     }
-    print(bounds)
-
     # get osm file
     store_map('map_files/map.osm', bounds)
 
@@ -113,7 +105,7 @@ def create_map():
     obj_convert_result = subprocess.run(' '.join(a), shell=True)
     print(obj_convert_result.returncode)
 
-    blender_args = ['--scale', '1000', '--size', '15', obj_path, json_path, blend_path, stl_path]
+    blender_args = ['--scale', str(scale), '--size', str(size), obj_path, json_path, blend_path, stl_path]
     blender_result = subprocess.run(['blender', '-b', '-P', 'convert.py', '--'] + blender_args)
     print(blender_result.returncode)
 
@@ -151,8 +143,9 @@ def get_stl(id):
 
 @app.route('/foo', methods=['GET'])
 def get_foo():
-    db = get_db()
-    cur = db.execute('select * from foo')
-    r = [dict((cur.description[i][0], value) for i, value in enumerate(row)) for row in cur.fetchall()]
-    print(r)
-    return jsonify(r)
+    return jsonify({'foo': 'bar'})
+
+if __name__ == '__main__':
+    app.debug = True
+    app.run()
+
