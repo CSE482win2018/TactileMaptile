@@ -16,6 +16,8 @@ class Home extends Component {
         containerDiv: "container background-black color-white"
       }
     }
+
+    this.setSearchResults = this.setSearchResults.bind(this);
   }
 
   render() {
@@ -38,12 +40,18 @@ class Home extends Component {
           <LocationForm
             data={this.props.data}
             updateData={this.props.updateData}
+            setSearchResults={this.setSearchResults}
             setMapAddress={this.props.setMapAddress}
             googleMapURL={config.googleMapsApiUri}
             loadingElement={<div/>} />
         </div>
       </div>
     );
+  }
+
+  setSearchResults(results) {
+    this.props.updateData({searchResults: results});
+    this.props.history.push('/searchresults');
   }
 }
 

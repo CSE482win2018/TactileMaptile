@@ -44,6 +44,12 @@ a.skiplink:focus {
   opacity: 0.5;
 }
 
+.row-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
 
 /* .App {
   text-align: center;

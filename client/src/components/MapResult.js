@@ -8,6 +8,8 @@ class MapResult extends Component {
   }
 
   render() {
+    // let stlId = null;
+    let stlId = this.props.stlId;
     return (
       <div className="container">
         <nav className="nav-inline">
@@ -18,10 +20,17 @@ class MapResult extends Component {
         </nav>
         <div className="header">
           <h2 className="header-title">3D Map Preview</h2>
-          {this.props.stlId ? (
-            <MapPreview3D mapStlUrl={"/api/map/stl/" + this.props.stlId} />
+          
+          {stlId ? (
+            <div>
+              <p>Rotate the map preview using the arrow keys or by using the buttons below the map.</p>
+              <MapPreview3D mapStlUrl={"/api/map/stl/" + stlId} />
+            </div>
           ) : (
-            <div>LOADING</div>
+            <div>
+              <p>Map is loading, please wait...</p>
+              <div className="spinner" style={{'width': '680px', 'height': '500px', 'border': '1px solid black'}}/>
+            </div>
           )}
         </div>
       </div>

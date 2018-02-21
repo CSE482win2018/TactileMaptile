@@ -49,7 +49,7 @@ class MapPreviewOl extends Component {
     componentWillReceiveProps(nextProps) {
         console.log("receiving props:", this.props, nextProps);
         let checkedProps = ['scale', 'size'];
-        if (checkedProps.some(key => this.props.data[key] !== nextProps.data[key])) {
+        if (checkedProps.some(key => this.props.data[key] !== nextProps.data[key]) || this.props.address.formatted_address !== nextProps.address.formatted_address) {
             this.updateMap(nextProps);
         }
     }

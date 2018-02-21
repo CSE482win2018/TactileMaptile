@@ -19,11 +19,12 @@ class MapDesigner extends Component {
     console.log(this.props);
     let address = this.props.data.address;
     return (
-      <div style={{display: 'flex'}} className="container">
-        <div style={{margin: '10px'}}>
+      <div className="row-container">
+        <div className="container">
           <nav className="nav-inline">
             <ul>
-              <li><Link to="/">Back to location search</Link></li>
+              <li><Link to="/">Back to home</Link></li>
+              <li><Link to="/searchresults">Back to search results</Link></li>
             </ul>
           </nav>
           <div className="header">
@@ -34,31 +35,35 @@ class MapDesigner extends Component {
           <form onSubmit={this.handleDesignSubmit}>
             <fieldset>
               <legend>Map options</legend>
-              <label htmlFor="size-select">Map print size</label>
-              <select name="size-select" onChange={(event) => this.props.updateData({size: +event.target.value})} defaultValue={17}>
-                <option value="13">13 cm / 5.1 inches across </option>
-                <option value="17">17 cm / 6.7 inches across (good for personal use)</option>
-                <option value="20">20 cm / 7.9 inches across</option>
-              </select>
-              <label htmlFor="size-select">Map scale</label>
-              <select name="scale-select" onChange={(event) => this.props.updateData({scale: +event.target.value})} defaultValue={2400}>
-                <option value="1000">1:1000 – single buildings or points of interest</option>
-                <option value="1400">1:1400</option>
-                <option value="1800">1:1800 – dense cities</option>
-                <option value="2400">1:2400 – default</option>
-                <option value="3200">1:3200 – average suburbs</option>
-                <option value="4200">1:4200</option>
-                <option value="5600">1:5600 – very sparsely built areas</option>
-                <option value="7500">1:7500</option>
-                <option value="9999">1:9999 – areas with only large roads</option>
-              </select>
+              <div className="field select">
+                <label htmlFor="size-select">Map print size</label>
+                <select name="size-select" onChange={(event) => this.props.updateData({size: +event.target.value})} defaultValue={17}>
+                  <option value="13">13 cm / 5.1 inches across </option>
+                  <option value="17">17 cm / 6.7 inches across (good for personal use)</option>
+                  <option value="20">20 cm / 7.9 inches across</option>
+                </select>
+              </div>
+              <div className="field select">
+                <label htmlFor="size-select">Map scale</label>
+                <select name="scale-select" onChange={(event) => this.props.updateData({scale: +event.target.value})} defaultValue={2400}>
+                  <option value="1000">1:1000 – single buildings or points of interest</option>
+                  <option value="1400">1:1400</option>
+                  <option value="1800">1:1800 – dense cities</option>
+                  <option value="2400">1:2400 – default</option>
+                  <option value="3200">1:3200 – average suburbs</option>
+                  <option value="4200">1:4200</option>
+                  <option value="5600">1:5600 – very sparsely built areas</option>
+                  <option value="7500">1:7500</option>
+                  <option value="9999">1:9999 – areas with only large roads</option>
+                </select>
+              </div>
               <button type="submit" className="button color-white background-secondary">Create map</button>
             </fieldset>
           </form>
           </div>
         </div>
         <div style={{display: 'flex', alignItems: 'center', margin: '10px'}}>
-          <MapPreviewOl maxSize={350} data={this.props.data} address={address} updateData={this.props.updateData}/>
+          <MapPreviewOl data={this.props.data} address={address} updateData={this.props.updateData}/>
         </div>
       </div>
     );

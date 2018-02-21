@@ -4,6 +4,7 @@ import Home from './components/Home';
 import MapDesigner from './components/MapDesigner';
 import MapPreviewOl from './components/MapPreviewOl';
 import MapResult from './components/MapResult';
+import SearchResults from './components/SearchResults';
 import { Route, Switch, withRouter } from 'react-router-dom';
 
 import normalTheme from './App.css';
@@ -24,7 +25,9 @@ class App extends Component {
         minLat: null,
         maxLat: null,
         minLng: null,
-        maxLng: null
+        maxLng: null,
+        locationInput: null,
+        searchResults: null
       },
       stlId: null,
       theme: null,
@@ -42,7 +45,6 @@ class App extends Component {
       }
     }
 
-    this.setMapAddress = this.setMapAddress.bind(this);
     this.updateData = this.updateData.bind(this);
     this.setStlId = this.setStlId.bind(this);
     this.navigateToMapResult = this.navigateToMapResult.bind(this);
@@ -68,19 +70,15 @@ class App extends Component {
         </header>
         <div>
           <Switch>
-            <Route path="/" exact render={(props) => <Home {...props} data={this.state.data} updateData={this.updateData} highContrast={this.state.highContrast} setMapAddress={this.setMapAddress}/>}/>
+            <Route path="/" exact render={(props) => <Home {...props} data={this.state.data} updateData={this.updateData} highContrast={this.state.highContrast} setSearchResults={this.setSearchResults}/>}/>
             <Route path="/design" render={(props) => <MapDesigner {...props} data={this.state.data} setStlId={this.setStlId} navigateToMapResult={this.navigateToMapResult} updateData={this.updateData} highContrast={this.state.highContrast}/>}/>
+            <Route path="/searchresults" render={(props) => <SearchResults {...props} data={this.state.data} updateData={this.updateData}/>}/>
             <Route path="/result" render={(props) => <MapResult {...props} data={this.state.data} stlId={this.state.stlId} updateData={this.updateData} highContrast={this.state.highContrast}/>}/>
             <Route path="/map" render={(props) => <MapPreviewOl {...props} data={this.state.data} updateData={this.updateData}/>}/>
           </Switch>
         </div>
       </main>
     );
-  }
-
-  setMapAddress(result) {
-    console.log("chosen address: ", result);
-    setTimeout(() => this.props.history.push('/design'), 1);
   }
 
   updateData(data) {
@@ -101,7 +99,7 @@ class App extends Component {
   navigateToMapResult() {
     setTimeout(() => this.props.history.push('/result'), 1);
   }
-  
+
 }
 
 export default withRouter(App);
