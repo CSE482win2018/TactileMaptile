@@ -21,7 +21,7 @@ To watch changes, run `yarn start`. To create a production build, run `yarn buil
 ### Web server
 
 Dependencies:
-* [Python 3](https://www.python.org/downloads/)
+* [Python 3 (at least 3.6)](https://www.python.org/downloads/)
 * [Flask](http://flask.pocoo.org/)
 * [SQLite](https://www.sqlite.org)
 
@@ -45,8 +45,8 @@ Set up the database with `flask initdb`, and run the server with `flask run`. By
 Dependencies:
 * [Java JRE or JDK (at least 7)](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
 * [Gradle](https://gradle.org/install/)
-* [Blender](https://www.blender.org/download/)
-* [Python 3](https://www.python.org/downloads/)
+* [Blender (at least 2.79)](https://www.blender.org/download/)
+* [Python 3 (at least 3.6)](https://www.python.org/downloads/)
 
 Creating a map goes as follows:
 * An `.osm` file is the input, which describes an area of the world. A .osm file can be download for an arbitary location from [OpenStreetMap](http://www.openstreetmap.org).
@@ -75,4 +75,4 @@ blender -b -P convert.py -- --scale [scale] --size [size] [path to input .obj fi
 
 The `.obj` and `.json` files for input are the ones created in the previous step.
 
-You can then open up Blender and look at the resulting map.
+You can then open up the `.blend` file with Blender and look at the resulting map, and the `.stl` can be used with a slicing program to send to a 3D printer.
