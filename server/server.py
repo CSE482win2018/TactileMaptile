@@ -6,13 +6,21 @@ from werkzeug.exceptions import BadRequest
 import subprocess
 import io
 import random
+import json
+import itertools
 
+from bus_utils import get_bus_stop_ids, bus_stops_for_node
 from get_osm import store_map
 
 def connect_db():
     """Connects to the specific database."""
     rv = sqlite3.connect(current_app.config['DATABASE'], isolation_level=None)
-    rv.row_factory = sqlite3.Row
+    def dict_factory(cursor, row):
+        d = {}
+        for idx, col in enumerate(cursor.description):
+            d[col[0]] = row[idx]
+        return d
+    rv.row_factory = dict_factory
     return rv
 
 def init_db():
@@ -71,8 +79,8 @@ def serve(path):
         else:
              return send_from_directory('react_app/build', 'index.html')
 
-@app.route('/api/map', methods=['POST'])
-def create_map():
+@app.route('/api/map/init', methods=['POST'])
+def init_map():
     print('creating map')
     print(request.form)
 
@@ -94,7 +102,6 @@ def create_map():
     obj_path = os.path.join(os.getcwd(), 'map_files', 'map.obj').replace("\\", "/")
     json_path = os.path.join(os.getcwd(), 'map_files', 'map.json').replace("\\", "/")
     blend_path = os.path.join(os.getcwd(), 'map_files', 'map.blend').replace("\\", "/")
-    stl_path = obj_out = os.path.join(os.getcwd(), 'map_files', 'map.stl').replace("\\", "/")
 
     # convert to obj
     map_generator_dir = os.path.join(os.getcwd(), 'map_generator', 'build', 'install', 'map_generator', 'bin', 'map_generator').replace("\\", "/")
@@ -105,7 +112,78 @@ def create_map():
     obj_convert_result = subprocess.run(' '.join(a), shell=True)
     print(obj_convert_result.returncode)
 
-    blender_args = ['--scale', str(scale), '--size', str(size), obj_path, json_path, blend_path, stl_path]
+    json_data = None
+    bus_stops = {}
+    with open(json_path, 'r') as json_file:
+        json_data = json.load(json_file)
+        bus_stop_ids = get_bus_stop_ids(json_data)
+        db = get_db()
+        query = 'SELECT * FROM bus_stops where node_id in ({0})'.format(','.join('?'*len(bus_stop_ids)))
+        print(query)
+        cur = db.execute(query, list(bus_stop_ids))
+        rows = cur.fetchall()
+        groups = {k: list(g) for k, g in itertools.groupby(rows, key=lambda x: x['node_id'])}
+        print("groups:", groups)
+        for bus_stop_id in bus_stop_ids:
+            if bus_stop_id in groups:
+                print("found {0} in db".format(bus_stop_id))
+                bus_stops = groups[bus_stop_id]
+            else:
+                print("could not find {0} in db".format(bus_stop_id))
+                bus_stops_res = bus_stops_for_node(bus_stop_id)
+                bus_stops = [{'node_id': bus_stop_id, 'name': x['name'], 'ref': int(x['ref'])} for x in bus_stops_res]
+                bus_stop_queries = [(x['node_id'], x['name'], x['ref']) for x in bus_stops]
+                # insert into database
+                query = 'INSERT INTO bus_stops(node_id, name, ref) VALUES (?, ?, ?)'
+                db.executemany(query, bus_stop_queries)
+            
+            # add bus stops to json data
+            json_data[str(bus_stop_id)]['busRoutes'] = bus_stops
+        
+        db.commit()
+        bus_stops = {}
+        for bus_stop_id in bus_stop_ids:
+            bus_stops[bus_stop_id] = json_data[str(bus_stop_id)]
+        print('final bus stops:', bus_stops)
+
+    # write bus stops to new json file
+    bus_stop_json_path = os.path.join(os.getcwd(), 'map_files', 'map_extra.json').replace("\\", "/")
+    with open(bus_stop_json_path, 'w') as file:
+        print('writing extra json to', bus_stop_json_path)
+        json.dump(json_data, file)
+
+    obj = None
+    with open(obj_path, 'rb') as obj_file:
+        obj = obj_file.read()
+
+    db = get_db()
+    id = random.randint(1, 100000)
+    db.execute('DELETE FROM map_files WHERE id = ?', (id,))
+    db.execute('INSERT INTO map_files(id, map_obj, size, scale) VALUES(?, ?, ?, ?)', (id, obj, size, scale))
+    db.commit()
+
+    return jsonify({'success': True, 'id': id, 'mapData': {'busStops': bus_stops}})
+
+@app.route('/api/map/<int:id>/create', methods=['POST'])
+def create_map(id):
+    obj_path = os.path.join(os.getcwd(), 'map_files', 'map.obj').replace("\\", "/")
+    json_path = os.path.join(os.getcwd(), 'map_files', 'map.json').replace("\\", "/")
+    blend_path = os.path.join(os.getcwd(), 'map_files', 'map.blend').replace("\\", "/")
+    stl_path = os.path.join(os.getcwd(), 'map_files', 'map.stl').replace("\\", "/")
+
+    # change to read obj file from database
+    db = get_db()
+    cur = db.execute('SELECT size, scale from map_files WHERE id = ?', (id,))
+    row = cur.fetchone()
+    size = row['size']
+    scale = row['scale']
+    db.commit()
+
+    data = request.get_json()
+    print("request data:", data)
+    bus_stops = ','.join(data['busStops'])
+
+    blender_args = ['--scale', str(scale), '--size', str(size), '--bus-stops', bus_stops, obj_path, json_path, blend_path, stl_path]
     blender_result = subprocess.run(['blender', '-b', '-P', 'convert.py', '--'] + blender_args)
     print(blender_result.returncode)
 
@@ -113,33 +191,27 @@ def create_map():
     with open(stl_path, 'rb') as stl_file:
         stl = stl_file.read()
 
-    db = get_db()
-    id = random.randint(1, 100000)
-    db.execute('INSERT INTO map_files VALUES(?, ?)', (id, stl))
+    db.execute('UPDATE map_files SET map_stl=? where id = ?', (stl, id))
     db.commit()
 
-    return jsonify({'success': True, 'id': id})
+    return jsonify({'success': True})
 
-@app.route('/api/map/stl/<id>')
+
+@app.route('/api/map/<int:id>/stl')
 def get_stl(id):
     print(id)
     db = get_db()
-    cur = db.execute('select map_obj from map_files where id = ?', (id,))
+    cur = db.execute('select map_stl from map_files where id = ?', (id,))
     row = cur.fetchone()
     if row is None:
         raise BadRequest('No stl data for id {0} found.'.format(id))
 
-    stl = row['map_obj']
-    # print(type(stl))
-    # print(stl)
+    stl = row['map_stl']
     sio = io.BytesIO()
     sio.write(stl)
     sio.seek(0)
     return send_file(sio, mimetype='application/vnd.ms-pki.stl')
-    # r = [dict((cur.description[i][0], value) for i, value in enumerate(row)) for row in cur.fetchall()]
-    # print(r)
-    # return jsonify(r)
-    # return send_from_directory('map_files', 'map.stl')
+
 
 @app.route('/foo', methods=['GET'])
 def get_foo():

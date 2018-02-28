@@ -1,18 +1,15 @@
 import React, { Component } from 'react';
 import { Redirect, Link } from 'react-router-dom';
+
 import MapPreviewOl from './MapPreviewOl';
+import PlaceResult from './PlaceResult';
 
 class SearchResults extends Component {
   constructor(props) {
     super(props);
 
-    let currAddressIndex = null;
-    if (props.data.searchResults.length === 1) {
-      currAddressIndex = 0;
-    }
-    
     this.state = {
-      currAddressIndex: currAddressIndex,
+      currAddressIndex: 0,
       showFormError: false
     }
 
@@ -51,7 +48,7 @@ class SearchResults extends Component {
           <p>You searched: {locationInput}</p>
           {this.getSearchResultsUI(searchResults)}
         </div>
-        <div>
+        <div className="container">
           {this.state.currAddressIndex !== null && <MapPreviewOl maxSize={500} data={this.props.data} address={this.props.data.searchResults[this.state.currAddressIndex]}/>}
         </div>
       </div>
@@ -60,13 +57,13 @@ class SearchResults extends Component {
 
   getSearchResultsUI(searchResults) {
     if (searchResults.length === 1) {
-      let address = searchResults[0];
+      let result = searchResults[0];
       return (
         <div>
           <fieldset>
             <legend>Confirm address</legend>
-            <p>Found 1 results. Hit "OK" if this is the address you want, otherwise try searching again.</p>
-            <p>Address found: {address.formatted_address}</p>
+            <p>Found 1 result. Hit "OK" if this is the address you want, otherwise try searching again.</p>
+            <p><PlaceResult address={result}/></p>
             <form onSubmit={this.handleAddressSubmit}>
               <button type="submit" className={"button swatch color-white background-secondary"}>OK</button>
             </form>
@@ -83,13 +80,26 @@ class SearchResults extends Component {
             <p>Found {searchResults.length} results. Choose the correct address below and hit "OK", otherwise try searching again.</p>
             <fieldset>
               <legend>Choose an address</legend>
-              {searchResults.map((result, index) => (
-                <label className="control control-l radio" key={index}>
-                  <input type="radio" name="address" value={index} onChange={this.handleMultipleResultsSelect}/>
-                  <span className="control-indicator"/>
-                  <span className="control-label">{result.formatted_address}</span>
-                </label>
-              ))}
+              {searchResults.map((result, index) => {
+                let radioProps = {
+                  type: 'radio',
+                  name: 'address',
+                  value: index,
+                  onChange: this.handleMultipleResultsSelect
+                };
+                return (
+                  <label className="control control-l radio" key={index}>
+                    {index == 0 ? (
+                      <input {...radioProps} defaultChecked/>
+                    ) : (
+                      <input {...radioProps}/>
+                    )}
+                    <span className="control-indicator"/>
+                    <PlaceResult address={result} className="control-label"/>
+                  </label>
+                );
+              }
+            )}
             <button type="submit" className={"button swatch color-white background-secondary"}>OK</button>
             {this.state.showFormError && (
               <p className="form-message error">Choose one of the addresses before hitting "OK"</p>
@@ -108,7 +118,7 @@ class SearchResults extends Component {
       return;
     }
     this.props.updateData({address: this.props.data.searchResults[this.state.currAddressIndex]});
-    this.props.history.push('/design');
+    this.props.history.push('/confirmcenter');
   }
 
   handleMultipleResultsSelect(event) {

@@ -8,15 +8,17 @@ class LocationForm extends Component {
   constructor(props) {
     super(props);
     this.geocodeInput = this.geocodeInput.bind(this);
-    this.geocoder = new window.google.maps.Geocoder();
+    console.log(window.google);
+    this.searchService = new window.google.maps.places.PlacesService(document.createElement('div'));
+    console.log(this.searchService);
     this.state = {
-      isGeocoding: false
+      searching: false
     }
   }
 
   render() {
     let locationResults = this.state.results;
-    let searchButton = !this.state.isGeocoding ? (
+    let searchButton = !this.state.searching ? (
       <button type="submit" className={"button swatch color-white background-primary"}>Search</button>
     ) : (
       <button type="submit" className={ "button spinner swatch color-white background-primary"}/>
@@ -38,35 +40,33 @@ class LocationForm extends Component {
 
   geocodeInput(event) {
     event.preventDefault();
-    console.log(`Geocoding with ${this.state.locationInput}`);
+    console.log(`Searching with ${this.props.data.locationInput}`);
     this.setState({
-      isGeocoding: true,
-      results: null
+      searching: true,
     });
 
-    let results = [
-      {
-        formatted_address: "5268 19th ave NE Seattle WA 98105",
-        geometry: {
-          location: {
-            lng: () => -122.3068156,
-            lat: () => 47.6684414
-          }
-        }
-      }
-    ];
-
+    // let results = [
+    //   {
+    //     formatted_address: "5268 19th ave NE Seattle WA 98105",
+    //     geometry: {
+    //       location: {
+    //         lng: () => -122.3068156,
+    //         lat: () => 47.6684414
+    //       }
+    //     }
+    //   }
+    // ];
     // this.setState({
-    //   isGeocoding: false
+    //   searching: false
     // });
     // console.log(results);
     // this.setState({
     //   results: results
     // });
 
-    this.geocoder.geocode({address: this.props.data.locationInput}, (results, status) => {
+    this.searchService.textSearch({query: this.props.data.locationInput}, (results, status) => {
       this.setState({
-        isGeocoding: false
+        searching: false
       });
       if (status !== 'OK') {
         console.log(`GEOCODING ERROR: ${status}`);

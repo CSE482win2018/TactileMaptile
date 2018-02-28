@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React, { Component } from 'react';
 import { withRouter, Link } from "react-router-dom";
 import MapPreviewOl from './MapPreviewOl';
 import '../App.css';
@@ -8,23 +8,32 @@ class MapDesigner extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      showPreview: false,
-      stlId: null,
+      busRouteStates: this.getRouteStates(props.data.mapData.busStops || {})
     };
 
     this.handleDesignSubmit = this.handleDesignSubmit.bind(this);
+    this.handleBusToggle = this.handleBusToggle.bind(this);
+    this.handleAllBusesToggle = this.handleAllBusesToggle.bind(this);
+  }
+
+  componentWillReceiveProps(nextProps) {
+    if (this.props.data.mapData.busRoutes != nextProps.data.mapData.busRoutes) {
+      this.setState({
+        busRouteStates: this.getRouteStates(nextProps.data.busRoutes || {})
+      });
+    }
   }
 
   render() {
-    console.log(this.props);
     let address = this.props.data.address;
+    let mapData = this.props.data.mapData;
     return (
       <div className="row-container">
         <div className="container">
           <nav className="nav-inline">
             <ul>
               <li><Link to="/">Back to home</Link></li>
-              <li><Link to="/searchresults">Back to search results</Link></li>
+              <li><Link to="/size">Back to set map size</Link></li>
             </ul>
           </nav>
           <div className="header">
@@ -34,29 +43,8 @@ class MapDesigner extends Component {
           <p>Using address: {address.formatted_address}</p>
           <form onSubmit={this.handleDesignSubmit}>
             <fieldset>
-              <legend>Map options</legend>
-              <div className="field select">
-                <label htmlFor="size-select">Map print size</label>
-                <select name="size-select" onChange={(event) => this.props.updateData({size: +event.target.value})} defaultValue={17}>
-                  <option value="13">13 cm / 5.1 inches across </option>
-                  <option value="17">17 cm / 6.7 inches across (good for personal use)</option>
-                  <option value="20">20 cm / 7.9 inches across</option>
-                </select>
-              </div>
-              <div className="field select">
-                <label htmlFor="size-select">Map scale</label>
-                <select name="scale-select" onChange={(event) => this.props.updateData({scale: +event.target.value})} defaultValue={2400}>
-                  <option value="1000">1:1000 – single buildings or points of interest</option>
-                  <option value="1400">1:1400</option>
-                  <option value="1800">1:1800 – dense cities</option>
-                  <option value="2400">1:2400 – default</option>
-                  <option value="3200">1:3200 – average suburbs</option>
-                  <option value="4200">1:4200</option>
-                  <option value="5600">1:5600 – very sparsely built areas</option>
-                  <option value="7500">1:7500</option>
-                  <option value="9999">1:9999 – areas with only large roads</option>
-                </select>
-              </div>
+              <legend>Navigation</legend>
+              {this.getBusStopUI(mapData.busStops)}
               <button type="submit" className="button color-white background-secondary">Create map</button>
             </fieldset>
           </form>
@@ -71,34 +59,98 @@ class MapDesigner extends Component {
 
   handleDesignSubmit(event) {
     event.preventDefault();
-    
-    let data = {
-      min_lat: this.props.data.minLat,
-      max_lat: this.props.data.maxLat,
-      min_lng: this.props.data.minLng,
-      max_lng: this.props.data.maxLng,
-      scale: this.props.data.scale,
-      size: this.props.data.size
-    };
-    let formData = new URLSearchParams();
-    Object.keys(data).forEach(key => {
-      formData.append(key, data[key]);
+    this.props.updateData({
+      mapCreated: false
     });
-    console.log(formData);
-    fetch('/api/map', {
+
+    let postData = {
+      busStops: Object.keys(this.state.busRouteStates)
+        .filter(key => this.state.busRouteStates[key])
+    }
+    
+    fetch(`/api/map/${this.props.stlId}/create`, {
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
+        'content-type': 'application/json'
       },
-      body: formData.toString(), // must match 'Content-Type' header
+      body: JSON.stringify(postData), // must match 'Content-Type' header
       method: 'POST', // *GET, PUT, DELETE, etc.
     })
     .then(response => response.json())
     .then(json => {
       console.log(json)
-      this.props.setStlId(json.id);
+      this.props.updateData({
+        mapCreated: true
+      });
     });
 
-    this.props.navigateToMapResult();
+    this.props.history.push('/result');
+  }
+
+  getBusStopUI() {
+    if (!this.state.busRouteStates || !Object.keys(this.state.busRouteStates).length) {
+      return <p>No bus stops found in this map.</p>;
+    }
+
+    return (
+      <div>
+        <ul className="no-bullets">
+          <li>
+            <label className="control control-xl checkbox">
+              <input type="checkbox"
+                checked={Object.keys(this.state.busRouteStates).every(key => this.state.busRouteStates[key])}
+                onChange={this.handleAllBusesToggle}/>
+              <span className="control-indicator"></span>
+              <span className="control-label">Bus stops</span>
+            </label>
+          </li>
+          <li>
+            <ul className="no-bullets">
+              {Object.keys(this.state.busRouteStates).map(ref => (
+                <li>
+                  <label className="control control-xl checkbox">
+                    <input type="checkbox" name="busroutes" value={ref}
+                      checked={this.state.busRouteStates[ref]}
+                      onChange={this.handleBusToggle}/>
+                    <span className="control-indicator"></span>
+                    <span className="control-label">{ref}</span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </li>
+        </ul>
+      </div>
+    );
+  }
+
+  handleAllBusesToggle(event) {
+    let busRouteStates = Object.assign({}, this.state.busRouteStates);
+    Object.keys(busRouteStates).forEach(key => busRouteStates[key] = event.target.checked);
+    this.setState({busRouteStates});
+  }
+
+  handleBusToggle(event) {
+    let busRouteStates = Object.assign({}, this.state.busRouteStates);
+    busRouteStates[event.target.value] = event.target.checked;
+    this.setState({busRouteStates});
+  }
+
+  getRouteStates(busStops) {
+    let routes = this.getRoutes(busStops);
+    let routeStates = {};
+    routes.forEach(route => routeStates[route] = false);
+    return routeStates;
+  }
+
+  getRoutes(busStops) {
+    let routes = new Set();
+    Object.keys(busStops).forEach(key => {
+      let busStop = busStops[key];
+      busStop.busRoutes.forEach(route => {
+        routes.add(route.ref);
+      })
+    });
+    return routes;
   }
 }
 

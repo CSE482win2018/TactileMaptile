@@ -15,6 +15,7 @@ import org.osm2world.core.ConversionFacade.Results;
 import org.osm2world.core.target.obj.ObjWriter;
 import org.apache.commons.configuration.BaseConfiguration;
 import org.apache.commons.configuration.Configuration;
+import org.osm2world.core.math.AxisAlignedBoundingBoxXZ;
 import java.io.IOException;
 import java.io.File;
 import com.google.gson.Gson;
@@ -42,7 +43,7 @@ public class OSMModelConverter {
         Results results = cf.createRepresentations(dataReader.getData(), null, config, null);
 
         Gson gson = new GsonBuilder().create();
-        Map<String, Map<String,String>> osmData = new HashMap<>();
+        Map<String, Object> osmData = new HashMap<>();
         for (MapElement e : results.getMapData().getMapElements()) {
             TagGroup tags = e.getTags();
             long id;
@@ -69,6 +70,17 @@ public class OSMModelConverter {
             elementData.put("mapElementClass", e.getClass().getSimpleName());
             osmData.put("" + id, elementData);
         }
+
+        AxisAlignedBoundingBoxXZ boundary = results.getMapData().getBoundary();
+        Map<String, Double> bounds = new HashMap<>();
+        bounds.put("minX", boundary.minX);
+        bounds.put("minY", boundary.minZ);
+        bounds.put("maxX", boundary.maxX);
+        bounds.put("maxY", boundary.maxZ);
+
+        Map<String, Object> meta = new HashMap<String, Object>();
+        meta.put("bounds", bounds);
+		osmData.put("meta", meta);
 
         String json = gson.toJson(osmData);
         PrintStream jsonOut = new PrintStream(jsonPath);

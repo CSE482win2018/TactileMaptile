@@ -2,9 +2,12 @@ import React, { Component } from 'react';
 
 import Home from './components/Home';
 import MapDesigner from './components/MapDesigner';
+import MapSize from './components/MapSize';
 import MapPreviewOl from './components/MapPreviewOl';
 import MapResult from './components/MapResult';
 import SearchResults from './components/SearchResults';
+import MapConfirm from './components/MapConfirm';
+
 import { Route, Switch, withRouter } from 'react-router-dom';
 
 import normalTheme from './App.css';
@@ -27,7 +30,9 @@ class App extends Component {
         minLng: null,
         maxLng: null,
         locationInput: null,
-        searchResults: null
+        searchResults: null,
+        mapCreated: false,
+        mapData: null
       },
       stlId: null,
       theme: null,
@@ -47,7 +52,6 @@ class App extends Component {
 
     this.updateData = this.updateData.bind(this);
     this.setStlId = this.setStlId.bind(this);
-    this.navigateToMapResult = this.navigateToMapResult.bind(this);
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -71,8 +75,10 @@ class App extends Component {
         <div>
           <Switch>
             <Route path="/" exact render={(props) => <Home {...props} data={this.state.data} updateData={this.updateData} highContrast={this.state.highContrast} setSearchResults={this.setSearchResults}/>}/>
-            <Route path="/design" render={(props) => <MapDesigner {...props} data={this.state.data} setStlId={this.setStlId} navigateToMapResult={this.navigateToMapResult} updateData={this.updateData} highContrast={this.state.highContrast}/>}/>
+            <Route path="/size" render={(props) => <MapSize {...props} data={this.state.data} updateData={this.updateData} setStlId={this.setStlId} highContrast={this.state.highContrast}/>}/>
+            <Route path="/design" render={(props) => <MapDesigner {...props} data={this.state.data} stlId={this.state.stlId} updateData={this.updateData} highContrast={this.state.highContrast}/>}/>
             <Route path="/searchresults" render={(props) => <SearchResults {...props} data={this.state.data} updateData={this.updateData}/>}/>
+            <Route path="/confirmcenter" render={(props) => <MapConfirm {...props} data={this.state.data} updateData={this.updateData}/>}/>
             <Route path="/result" render={(props) => <MapResult {...props} data={this.state.data} stlId={this.state.stlId} updateData={this.updateData} highContrast={this.state.highContrast}/>}/>
             <Route path="/map" render={(props) => <MapPreviewOl {...props} data={this.state.data} updateData={this.updateData}/>}/>
           </Switch>
@@ -91,15 +97,11 @@ class App extends Component {
   }
 
   setStlId(id) {
+    console.log("NEW STL ID:", id);
     this.setState({
       stlId: id
     });
   }
-
-  navigateToMapResult() {
-    setTimeout(() => this.props.history.push('/result'), 1);
-  }
-
 }
 
 export default withRouter(App);

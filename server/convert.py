@@ -704,7 +704,7 @@ def depress_buildings(buildings):
     # bpy.ops.object.mode_set(mode = 'OBJECT')
     # bpy.context.tool_settings.mesh_select_mode = [True, False, False]
 
-def process_objects(min_x, min_y, max_x, max_y, min_z, max_z, scale, no_borders):
+def process_objects(min_x, min_y, max_x, max_y, min_z, max_z, scale, no_borders, bus_stops):
     t = time.clock()
     mm_to_units = scale / 1000
     if not no_borders:
@@ -715,6 +715,8 @@ def process_objects(min_x, min_y, max_x, max_y, min_z, max_z, scale, no_borders)
         max_y = max_y - space
     min_co = (min_x, min_y, min_z)
     max_co = (max_x, max_y, max_z)
+
+    print("BUS STOPS:", bus_stops)
 
     # First find out everything that we can join together into combined objects and do join,
     # because CPU usage is dominated by each Blender operation iterating through every object in the scene.
@@ -855,20 +857,26 @@ def process_objects(min_x, min_y, max_x, max_y, min_z, max_z, scale, no_borders)
     do_ways(joined_roads_car, ROAD_HEIGHT_CAR_MM * mm_to_units, min_x, min_y, max_x, max_y)
     do_ways(joined_roads_ped, ROAD_HEIGHT_PEDESTRIAN_MM * mm_to_units, min_x, min_y, max_x, max_y)
 
-def make_tactile_map(args):
+def make_tactile_map(args, scene_data):
     t = time.clock()
     bpy.ops.object.select_all(action='SELECT')
     bpy.ops.object.transform_apply(rotation=True)
     bpy.context.scene.update()
-    min_x, min_y, max_x, max_y = get_scene_bounds()
+
+    bounds = scene_data['meta']['bounds']
+    min_x = bounds['minX']
+    min_y = bounds['minY']
+    max_x = bounds['maxX']
+    max_y = bounds['maxY']
     debug_print('min x: {0}, min y: {1}, max_x: {2}, max_y: {3}'.format(min_x, min_y, max_x, max_y))
     # Create the support cube and borders
-    base_cube = create_bounds(min_x, min_y, max_x, max_y, args.scale, args.no_borders)
+    base_cube = create_bounds(min_x, min_y, max_x, max_y, args.scale, False)
     min_z = min(x.co[2] for x in base_cube.data.vertices)
     max_z = 0
     bpy.ops.object.select_all(action='SELECT')
     bpy.ops.object.transform_apply(location=True, scale=True)
-    process_objects(min_x, min_y, max_x, max_y, min_z, max_z, args.scale, args.no_borders)
+    bus_stops = [int(x) for x in args.bus_stops.split(',')]
+    process_objects(min_x, min_y, max_x, max_y, min_z, max_z, args.scale, False, bus_stops)
     debug_print("process_objects() took " + (str(time.clock() - t)))
 
     # Add marker(s)
@@ -909,10 +917,7 @@ def convert_osm(args):
 
     scene_data = json.load(open(osm_json_path, 'r'))
 
-    Args = namedtuple('Args', ['no_borders', 'scale', 'marker1'])
-    args = Args(no_borders = False, scale = 4000, marker1 = None)
-
-    base_cube = make_tactile_map(args)
+    base_cube = make_tactile_map(args, scene_data)
     move_everything([-c for c in get_minimum_coordinate(base_cube)])
 
     # depress_buildings(base_cube)
@@ -926,6 +931,8 @@ def do_cmdline():
     parser.add_argument('-v', '--verbose', action='store_true', help="debug prints")
     parser.add_argument('--size', metavar='METERS', type=float, help="print size in cm")
     parser.add_argument('-s', '--stl-to-stdout', action='store_true', help="output stl file to stdout")
+    parser.add_argument('--bus-stops', help="comma separated (no spaces) list of bus routes to include")
+    parser.add_argument('--marker1', metavar='MARKER', help="first marker's position relative to top left corner")
     parser.add_argument('obj_path', help='.obj file to use as input')
     parser.add_argument('json_path', help='.obj file to use as input')
     parser.add_argument('blend_path', help='.blend file to output')
@@ -936,6 +943,7 @@ def do_cmdline():
 def main(argv):
     global verbose
     args = do_cmdline()
+    print("args:", args)
     verbose = args.verbose
     convert_osm(args)
 

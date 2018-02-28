@@ -50,6 +50,10 @@ a.skiplink:focus {
   justify-content: space-between;
 }
 
+.no-bullets {
+  list-style-type: none;
+}
+
 
 /* .App {
   text-align: center;
