@@ -332,7 +332,7 @@ def join_objects(objects, name):
 
 def join_and_clip(objects, min_co, max_co, name):
     if len(objects) == 0:
-        
+
         return None
     combined = join_objects(objects, name)
     clip_object_to_map(combined, min_co, max_co)
@@ -704,7 +704,7 @@ def depress_buildings(buildings):
     # bpy.ops.object.mode_set(mode = 'OBJECT')
     # bpy.context.tool_settings.mesh_select_mode = [True, False, False]
 
-def process_objects(min_x, min_y, max_x, max_y, min_z, max_z, scale, no_borders, bus_stops):
+def process_objects(min_x, min_y, max_x, max_y, min_z, max_z, scale, no_borders, scene_data, bus_stops):
     t = time.clock()
     mm_to_units = scale / 1000
     if not no_borders:
@@ -809,6 +809,41 @@ def process_objects(min_x, min_y, max_x, max_y, min_z, max_z, scale, no_borders,
         # fatten(joined_buildings)
         debug_print("processing %d buildings took %.2f" % (len(buildings), time.clock() - t))
 
+    # Bus stops
+    if len(bus_stops):
+        stop_nodes = {}
+        for node_id, data in scene_data.items():
+            if data.get('public_transport') == 'platform':
+                matching_routes = [x for x in data.get('busRoutes', []) if x['ref'] in bus_stops]
+                if len(matching_routes):
+                    stop_nodes[node_id] = matching_routes
+
+        print("bus stop nodes:", stop_nodes)
+        for stop_id in stop_nodes:
+            bus_stop_obj = [o for o in bpy.context.scene.objects if o.name == 'BusStop@' + str(stop_id)]
+            if len(bus_stop_obj) == 0:
+                print("no object found for stop id: {0}...".format(stop_id))
+            if len(bus_stop_obj) > 1:
+                print("multiple objects for stop id: {0}...".format(stop_id))
+            bus_stop_obj = bus_stop_obj[0]
+
+            vcos = [ bus_stop_obj.matrix_world * v.co for v in bus_stop_obj.data.vertices ]
+            findCenter = lambda l: ( max(l) + min(l) ) / 2
+
+            x,y,z  = [ [v[i] for v in vcos] for i in range(3) ]
+            center = [ findCenter(axis) for axis in [x,y,z] ]
+
+            bpy.ops.mesh.primitive_cone_add()
+            cube = bpy.context.active_object
+            bpy.ops.object.mode_set(mode = 'EDIT')
+            bpy.ops.mesh.select_all(action='SELECT')
+            bpy.ops.mesh.normals_make_consistent()
+            bpy.ops.object.mode_set(mode = 'OBJECT')
+            cube.location = center
+            cube.scale = [ 12, 12, 12 ]
+            bpy.context.scene.update() # flush changes to location and scale
+            # bpy.ops.object.transform_apply(location=True, scale=True)
+
     # Waters
     t = time.clock()
     if len(joinable_waterways) > 0:
@@ -872,11 +907,11 @@ def make_tactile_map(args, scene_data):
     # Create the support cube and borders
     base_cube = create_bounds(min_x, min_y, max_x, max_y, args.scale, False)
     min_z = min(x.co[2] for x in base_cube.data.vertices)
-    max_z = 0
+    max_z = max(x.co[2] for x in base_cube.data.vertices)
     bpy.ops.object.select_all(action='SELECT')
     bpy.ops.object.transform_apply(location=True, scale=True)
-    bus_stops = [int(x) for x in args.bus_stops.split(',')]
-    process_objects(min_x, min_y, max_x, max_y, min_z, max_z, args.scale, False, bus_stops)
+    bus_stops = set([int(x) for x in args.bus_stops.split(',')])
+    process_objects(min_x, min_y, max_x, max_y, min_z, max_z, args.scale, False, scene_data, bus_stops)
     debug_print("process_objects() took " + (str(time.clock() - t)))
 
     # Add marker(s)
