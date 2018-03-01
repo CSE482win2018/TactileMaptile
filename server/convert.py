@@ -10,7 +10,7 @@ import json
 import argparse
 
 ROAD_HEIGHT_CAR_MM = 0.82 # 3 x 0.25-0.3mm layers
-ROAD_HEIGHT_PEDESTRIAN_MM = 1.5
+ROAD_HEIGHT_PEDESTRIAN_MM = 2
 BUILDING_HEIGHT_MM = 2.9
 BASE_HEIGHT_MM = 2
 BASE_OVERLAP_MM = 0.01
@@ -22,6 +22,7 @@ BORDER_HEIGHT_MM = (ROAD_HEIGHT_PEDESTRIAN_MM + BUILDING_HEIGHT_MM) / 2
 BORDER_HORIZONTAL_OVERLAP_MM = 0.05
 MARKER_HEIGHT_MM = BUILDING_HEIGHT_MM + 2
 MARKER_RADIUS_MM = MARKER_HEIGHT_MM * 0.5
+CONE_SCALE = [8, 8, 8]
 
 scene_data = None
 verbose = False
@@ -152,6 +153,7 @@ def export_svg(base_path, args):
             if ob.name.startswith('Road'):
                 if is_pedestrian(ob.name):
                     roads_ped.append(ob)
+                    print("{0} is a pedestrian path.".format(ob.name))
                 else:
                     roads_car.append(ob)
             elif ob.name.startswith('Rail'):
@@ -332,7 +334,7 @@ def join_objects(objects, name):
 
 def join_and_clip(objects, min_co, max_co, name):
     if len(objects) == 0:
-        
+
         return None
     combined = join_objects(objects, name)
     clip_object_to_map(combined, min_co, max_co)
@@ -394,8 +396,11 @@ def water_wave_pattern(object, depth, scale):
 
     bpy.ops.object.mode_set(mode = 'OBJECT')
 
-def is_pedestrian(road_name):
-    return road_name.endswith('::pedestrian')
+def is_pedestrian(road_name, scene_data):
+    road_id = road_name[road_name.index('@') + 1:]
+    print("checking", road_id)
+    print("   ", scene_data[road_id])
+    return scene_data[road_id].get('highway') == 'footway'
 
 ## Disable stdout buffering
 #class Unbuffered(object):
@@ -724,12 +729,11 @@ def depress_buildings(buildings, min_x, max_x, min_y, max_y, min_z, max_z):
     bpy.ops.mesh.select_all(action = 'DESELECT')
     bpy.ops.object.mode_set(mode = 'OBJECT')
 
-def process_objects(min_x, max_x, min_y, max_y, min_z, max_z, scale, no_borders, bus_stops):
+def process_objects(min_x, max_x, min_y, max_y, min_z, max_z, scale, no_borders, scene_data, bus_stops):
     base_min_x = min_x
     base_max_x = max_x
     base_min_y = min_y
     base_max_y = max_y
-    print(min_x, max_x, min_y, max_y, min_z, max_z)
     t = time.clock()
     mm_to_units = scale / 1000
     if not no_borders:
@@ -764,7 +768,8 @@ def process_objects(min_x, max_x, min_y, max_y, min_z, max_z, scale, no_borders,
         elif ob.name.startswith('Building'):
             buildings.append(ob)
         elif ob.name.startswith('Road'):
-            if is_pedestrian(ob.name):
+            if is_pedestrian(ob.name, scene_data):
+                print(ob.name, "is a pedestrian path")
                 if ob.name.startswith('RoadArea'):
                     road_areas_ped.append(ob)
                 else:
@@ -833,6 +838,42 @@ def process_objects(min_x, max_x, min_y, max_y, min_z, max_z, scale, no_borders,
         # extrude_building(joined_buildings, BUILDING_HEIGHT_MM * mm_to_units)
         # fatten(joined_buildings)
         debug_print("processing %d buildings took %.2f" % (len(buildings), time.clock() - t))
+
+    # Bus stops
+    if len(bus_stops):
+        stop_nodes = {}
+        for node_id, data in scene_data.items():
+            if data.get('public_transport') == 'platform':
+                print("routes through {0}: {1}".format(node_id, [x['ref'] for x in data.get('busRoutes', [])]))
+                matching_routes = [x for x in data.get('busRoutes', []) if x['ref'] in bus_stops]
+                if len(matching_routes):
+                    stop_nodes[node_id] = matching_routes
+
+        print("bus stop nodes:", stop_nodes)
+        for stop_id in stop_nodes:
+            bus_stop_obj = [o for o in bpy.context.scene.objects if o.name == 'BusStop@' + str(stop_id)]
+            if len(bus_stop_obj) == 0:
+                print("no object found for stop id: {0}...".format(stop_id))
+            if len(bus_stop_obj) > 1:
+                print("multiple objects for stop id: {0}...".format(stop_id))
+            bus_stop_obj = bus_stop_obj[0]
+
+            vcos = [ bus_stop_obj.matrix_world * v.co for v in bus_stop_obj.data.vertices ]
+            findCenter = lambda l: ( max(l) + min(l) ) / 2
+
+            x,y,z  = [ [v[i] for v in vcos] for i in range(3) ]
+            center = [ findCenter(axis) for axis in [x,y,z] ]
+
+            bpy.ops.mesh.primitive_cone_add()
+            cube = bpy.context.active_object
+            bpy.ops.object.mode_set(mode = 'EDIT')
+            bpy.ops.mesh.select_all(action='SELECT')
+            bpy.ops.mesh.normals_make_consistent()
+            bpy.ops.object.mode_set(mode = 'OBJECT')
+            cube.location = center
+            cube.scale = CONE_SCALE
+            bpy.context.scene.update() # flush changes to location and scale
+            # bpy.ops.object.transform_apply(location=True, scale=True)
 
     # Waters
     t = time.clock()
@@ -904,8 +945,10 @@ def make_tactile_map(args, scene_data):
     max_y = max(x.co[1] for x in base_cube.data.vertices)
     min_z = min(x.co[2] for x in base_cube.data.vertices)
     max_z = max(x.co[2] for x in base_cube.data.vertices)
-    bus_stops = [int(x) for x in args.bus_stops.split(',')]
-    process_objects(min_x, max_x, min_y, max_y, min_z, max_z, args.scale, False, bus_stops)
+    bpy.ops.object.select_all(action='SELECT')
+    bpy.ops.object.transform_apply(location=True, scale=True)
+    bus_stops = set([int(x) for x in args.bus_stops.split(',')])
+    process_objects(min_x, max_x, min_y, max_y, min_z, max_z, args.scale, False, scene_data, bus_stops)
     debug_print("process_objects() took " + (str(time.clock() - t)))
 
     # Add marker(s)
