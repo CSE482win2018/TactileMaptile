@@ -10,7 +10,7 @@ import json
 import argparse
 
 ROAD_HEIGHT_CAR_MM = 0.82 # 3 x 0.25-0.3mm layers
-ROAD_HEIGHT_PEDESTRIAN_MM = 1.5
+ROAD_HEIGHT_PEDESTRIAN_MM = 2
 BUILDING_HEIGHT_MM = 2.9
 BASE_HEIGHT_MM = 2
 BASE_OVERLAP_MM = 0.01
@@ -22,6 +22,7 @@ BORDER_HEIGHT_MM = (ROAD_HEIGHT_PEDESTRIAN_MM + BUILDING_HEIGHT_MM) / 2
 BORDER_HORIZONTAL_OVERLAP_MM = 0.05
 MARKER_HEIGHT_MM = BUILDING_HEIGHT_MM + 2
 MARKER_RADIUS_MM = MARKER_HEIGHT_MM * 0.5
+CONE_SCALE = [8, 8, 8]
 
 scene_data = None
 verbose = False
@@ -152,6 +153,7 @@ def export_svg(base_path, args):
             if ob.name.startswith('Road'):
                 if is_pedestrian(ob.name):
                     roads_ped.append(ob)
+                    print("{0} is a pedestrian path.".format(ob.name))
                 else:
                     roads_car.append(ob)
             elif ob.name.startswith('Rail'):
@@ -394,8 +396,11 @@ def water_wave_pattern(object, depth, scale):
 
     bpy.ops.object.mode_set(mode = 'OBJECT')
 
-def is_pedestrian(road_name):
-    return road_name.endswith('::pedestrian')
+def is_pedestrian(road_name, scene_data):
+    road_id = road_name[road_name.index('@') + 1:]
+    print("checking", road_id)
+    print("   ", scene_data[road_id])
+    return scene_data[road_id].get('highway') == 'footway'
 
 ## Disable stdout buffering
 #class Unbuffered(object):
@@ -739,7 +744,8 @@ def process_objects(min_x, min_y, max_x, max_y, min_z, max_z, scale, no_borders,
         elif ob.name.startswith('Building'):
             buildings.append(ob)
         elif ob.name.startswith('Road'):
-            if is_pedestrian(ob.name):
+            if is_pedestrian(ob.name, scene_data):
+                print(ob.name, "is a pedestrian path")
                 if ob.name.startswith('RoadArea'):
                     road_areas_ped.append(ob)
                 else:
@@ -814,6 +820,7 @@ def process_objects(min_x, min_y, max_x, max_y, min_z, max_z, scale, no_borders,
         stop_nodes = {}
         for node_id, data in scene_data.items():
             if data.get('public_transport') == 'platform':
+                print("routes through {0}: {1}".format(node_id, [x['ref'] for x in data.get('busRoutes', [])]))
                 matching_routes = [x for x in data.get('busRoutes', []) if x['ref'] in bus_stops]
                 if len(matching_routes):
                     stop_nodes[node_id] = matching_routes
@@ -840,7 +847,7 @@ def process_objects(min_x, min_y, max_x, max_y, min_z, max_z, scale, no_borders,
             bpy.ops.mesh.normals_make_consistent()
             bpy.ops.object.mode_set(mode = 'OBJECT')
             cube.location = center
-            cube.scale = [ 12, 12, 12 ]
+            cube.scale = CONE_SCALE
             bpy.context.scene.update() # flush changes to location and scale
             # bpy.ops.object.transform_apply(location=True, scale=True)
 
