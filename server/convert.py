@@ -577,7 +577,7 @@ def do_road_areas(roads, height):
     fatten(roads)
     #debug_print("processing %s took %.2f" % (roads.name, time.clock() - t))
 
-def depress_buildings(buildings):
+def depress_buildings(buildings, min_x, max_x, min_y, max_y, min_z, max_z):
     base = bpy.context.scene.objects['Base']
     z_max_base = max(v.co[2] for v in base.data.vertices)
     debug_print('z_max_base:', z_max_base)
@@ -630,7 +630,7 @@ def depress_buildings(buildings):
         bpy.context.scene.objects.active = building
         bpy.ops.object.mode_set(mode = 'EDIT')
         bpy.ops.mesh.select_all(action='SELECT')
-        bpy.ops.mesh.extrude_region_move(TRANSFORM_OT_translate={ "value": (0.0, 0.0, -(5 + base.dimensions[2])) })
+        bpy.ops.mesh.extrude_region_move(TRANSFORM_OT_translate={ "value": (0.0, 0.0, -(5 + base.dimensions[2] - 0.2)) })
 
         bpy.context.tool_settings.mesh_select_mode = sel_mode
 
@@ -700,11 +700,36 @@ def depress_buildings(buildings):
     bpy.ops.mesh.select_all(action = 'DESELECT')
     bpy.ops.object.mode_set(mode = 'OBJECT')
 
-    # remove all vertices outside of the base
-    # bpy.ops.object.mode_set(mode = 'OBJECT')
-    # bpy.context.tool_settings.mesh_select_mode = [True, False, False]
+    # remove all vertices at bottom level of base (that aren't the base's corners)
+    bpy.ops.object.mode_set(mode = 'OBJECT')
+    bpy.context.tool_settings.mesh_select_mode = [True, False, False]
+    return
 
-def process_objects(min_x, min_y, max_x, max_y, min_z, max_z, scale, no_borders, bus_stops):
+    def base_cube_vertex(vertex):
+        x_side = abs(vertex.co[0] - min_x) < 0.1 or abs(vertex.co[0] - max_x) < 0.1
+        y_side = abs(vertex.co[1] - min_y) < 0.1 or abs(vertex.co[1] - max_y) < 0.1
+        if x_side and y_side:
+            print("Bottom base vertex:", vertex.co)
+        return x_side and y_side
+
+    print("deleting rogue vertices:")
+    print(min_x, max_x, min_y, max_y, min_z, max_z)
+    for v in base.data.vertices:
+        if abs(v.co[2] - min_z) < 0.3 and not base_cube_vertex(v):
+            v.select = True
+            # print("NON BASE VERTEX:", v.co)
+
+    bpy.ops.object.mode_set(mode = 'EDIT')
+    bpy.ops.mesh.delete(type='VERT')
+    bpy.ops.mesh.select_all(action = 'DESELECT')
+    bpy.ops.object.mode_set(mode = 'OBJECT')
+
+def process_objects(min_x, max_x, min_y, max_y, min_z, max_z, scale, no_borders, bus_stops):
+    base_min_x = min_x
+    base_max_x = max_x
+    base_min_y = min_y
+    base_max_y = max_y
+    print(min_x, max_x, min_y, max_y, min_z, max_z)
     t = time.clock()
     mm_to_units = scale / 1000
     if not no_borders:
@@ -804,7 +829,7 @@ def process_objects(min_x, min_y, max_x, max_y, min_z, max_z, scale, no_borders,
     # debug_print('META-START:{"buildingCount":%d}:META-END\n' % (len(buildings)))
     if len(buildings):
         t = time.clock()
-        depress_buildings(buildings)
+        depress_buildings(buildings, base_min_x, base_max_x, base_min_y, base_max_y, min_z, max_z)
         # extrude_building(joined_buildings, BUILDING_HEIGHT_MM * mm_to_units)
         # fatten(joined_buildings)
         debug_print("processing %d buildings took %.2f" % (len(buildings), time.clock() - t))
@@ -871,12 +896,16 @@ def make_tactile_map(args, scene_data):
     debug_print('min x: {0}, min y: {1}, max_x: {2}, max_y: {3}'.format(min_x, min_y, max_x, max_y))
     # Create the support cube and borders
     base_cube = create_bounds(min_x, min_y, max_x, max_y, args.scale, False)
-    min_z = min(x.co[2] for x in base_cube.data.vertices)
-    max_z = 0
     bpy.ops.object.select_all(action='SELECT')
     bpy.ops.object.transform_apply(location=True, scale=True)
+    min_x = min(x.co[0] for x in base_cube.data.vertices)
+    max_x = max(x.co[0] for x in base_cube.data.vertices)
+    min_y = min(x.co[1] for x in base_cube.data.vertices)
+    max_y = max(x.co[1] for x in base_cube.data.vertices)
+    min_z = min(x.co[2] for x in base_cube.data.vertices)
+    max_z = max(x.co[2] for x in base_cube.data.vertices)
     bus_stops = [int(x) for x in args.bus_stops.split(',')]
-    process_objects(min_x, min_y, max_x, max_y, min_z, max_z, args.scale, False, bus_stops)
+    process_objects(min_x, max_x, min_y, max_y, min_z, max_z, args.scale, False, bus_stops)
     debug_print("process_objects() took " + (str(time.clock() - t)))
 
     # Add marker(s)
