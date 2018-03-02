@@ -23,13 +23,18 @@ class LocationForm extends Component {
     ) : (
       <button type="submit" className={ "button spinner swatch color-white background-primary"}/>
     );
+    let inputTextStyle = {};
+    if (this.props.highContrast) {
+      inputTextStyle.color = 'black';
+    }
+
     return (
       <div>
         <form onSubmit={this.geocodeInput}>
           <fieldset>
             <legend>Search for the map's location</legend>
             <div className="input-group">
-              <input type="text" placeholder="Search location" onChange={e => {this.props.updateData({locationInput: e.target.value})}} />
+              <input type="text" style={inputTextStyle} placeholder="Search location" onChange={e => {this.props.updateData({locationInput: e.target.value})}} />
               {searchButton}   
             </div>   
           </fieldset>

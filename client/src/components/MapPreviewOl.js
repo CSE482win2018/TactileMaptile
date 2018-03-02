@@ -17,6 +17,7 @@ class MapPreviewOl extends Component {
         super(props);
         this.zoom = this.zoom.bind(this);
         this.updateMap = this.updateMap.bind(this);
+        this.updateDimensions = this.updateDimensions.bind(this);
     }
 
     componentDidMount() {
@@ -44,6 +45,19 @@ class MapPreviewOl extends Component {
         });
 
         this.updateMap(this.props);
+
+        window.addEventListener("resize", () => setTimeout(() => this.updateDimensions(), 200));
+    }
+
+    updateDimensions() {
+        console.log(this.map);
+        this.map.updateSize();
+    }
+
+    componentWillMount() {
+        if (this.map) {
+            this.updateDimensions();
+        }
     }
 
     componentWillReceiveProps(nextProps) {
@@ -58,7 +72,7 @@ class MapPreviewOl extends Component {
         return (
             <div>
                 <a className="skiplink" href="#map">Focus map</a>
-                <div style={{width: '50vw', height: '50vw'}} id="map" className="map" tabIndex="0" ref={map => this.mapEl = map}/>
+                <div style={{width: '45vw', height: '45vw'}} id="map" className="map" tabIndex="0" ref={map => this.mapEl = map}/>
                 <div className="marker" title={this.props.address.formatted_address} ref={marker => this.markerEl = marker}/>
                 <button onClick={() => this.zoom(-1)}>Zoom out</button>
                 <button onClick={() => this.zoom(1)}>Zoom in</button>

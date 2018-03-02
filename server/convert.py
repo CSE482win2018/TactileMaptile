@@ -635,7 +635,7 @@ def depress_buildings(buildings, min_x, max_x, min_y, max_y, min_z, max_z):
         bpy.context.scene.objects.active = building
         bpy.ops.object.mode_set(mode = 'EDIT')
         bpy.ops.mesh.select_all(action='SELECT')
-        bpy.ops.mesh.extrude_region_move(TRANSFORM_OT_translate={ "value": (0.0, 0.0, -(5 + base.dimensions[2] - 0.2)) })
+        bpy.ops.mesh.extrude_region_move(TRANSFORM_OT_translate={ "value": (0.0, 0.0, -(5 + base.dimensions[2] - 0.4)) })
 
         bpy.context.tool_settings.mesh_select_mode = sel_mode
 

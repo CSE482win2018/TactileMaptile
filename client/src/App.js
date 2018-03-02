@@ -52,15 +52,21 @@ class App extends Component {
 
     this.updateData = this.updateData.bind(this);
     this.setStlId = this.setStlId.bind(this);
+    this.setHighContrast = this.setHighContrast.bind(this);
   }
 
-  componentDidUpdate(prevProps, prevState) {
-    let params = new URLSearchParams(this.props.location.search);
-    let highContrast = params.has('highContrast');
-    if (prevState.highContrast === highContrast) {
-      return;
-    }
-    this.setState({highContrast})
+  // componentDidUpdate(prevProps, prevState) {
+  //   let params = new URLSearchParams(this.props.location.search);
+  //   let highContrast = params.has('highContrast');
+  //   if (prevState.highContrast === highContrast) {
+  //     return;
+  //   }
+  //   this.setState({highContrast})
+  // }
+
+  setHighContrast(highContrast) {
+    console.log("setting high contrast:", highContrast);
+    this.setState({highContrast});
   }
 
   render() {
@@ -74,12 +80,12 @@ class App extends Component {
         </header>
         <div>
           <Switch>
-            <Route path="/" exact render={(props) => <Home {...props} data={this.state.data} updateData={this.updateData} highContrast={this.state.highContrast} setSearchResults={this.setSearchResults}/>}/>
-            <Route path="/size" render={(props) => <MapSize {...props} data={this.state.data} updateData={this.updateData} setStlId={this.setStlId} highContrast={this.state.highContrast}/>}/>
-            <Route path="/design" render={(props) => <MapDesigner {...props} data={this.state.data} stlId={this.state.stlId} updateData={this.updateData} highContrast={this.state.highContrast}/>}/>
-            <Route path="/searchresults" render={(props) => <SearchResults {...props} data={this.state.data} updateData={this.updateData}/>}/>
-            <Route path="/confirmcenter" render={(props) => <MapConfirm {...props} data={this.state.data} updateData={this.updateData}/>}/>
-            <Route path="/result" render={(props) => <MapResult {...props} data={this.state.data} stlId={this.state.stlId} updateData={this.updateData} highContrast={this.state.highContrast}/>}/>
+            <Route path="/" exact render={(props) => <Home {...props} setHighContrast={this.setHighContrast} data={this.state.data} updateData={this.updateData} highContrast={this.state.highContrast}/>}/>
+            <Route path="/size" render={(props) => <MapSize {...props} setHighContrast={this.setHighContrast} data={this.state.data} updateData={this.updateData} setStlId={this.setStlId} highContrast={this.state.highContrast}/>}/>
+            <Route path="/design" render={(props) => <MapDesigner {...props} setHighContrast={this.setHighContrast} data={this.state.data} stlId={this.state.stlId} updateData={this.updateData} highContrast={this.state.highContrast}/>}/>
+            <Route path="/searchresults" render={(props) => <SearchResults {...props} setHighContrast={this.setHighContrast} data={this.state.data} updateData={this.updateData} highContrast={this.state.highContrast}/>}/>
+            <Route path="/confirmcenter" render={(props) => <MapConfirm {...props} setHighContrast={this.setHighContrast} data={this.state.data} updateData={this.updateData} highContrast={this.state.highContrast}/>}/>
+            <Route path="/result" render={(props) => <MapResult {...props} setHighContrast={this.setHighContrast} data={this.state.data} stlId={this.state.stlId} updateData={this.updateData} highContrast={this.state.highContrast}/>}/>
             <Route path="/map" render={(props) => <MapPreviewOl {...props} data={this.state.data} updateData={this.updateData}/>}/>
           </Switch>
         </div>

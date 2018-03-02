@@ -44,6 +44,11 @@ class MapConfirm extends Component {
         <div className="container">
           <nav className="nav-inline">
             <ul>
+              {!this.props.highContrast ? (
+                <li><a role="button" tabindex="0" onClick={() => this.props.setHighContrast(true)}>View page in high contrast</a></li>
+              ) : (
+                <li><a role="button" tabindex="0" onClick={() => this.props.setHighContrast(false)}>View page without high contrast</a></li>
+              )}
               <li><Link to="/searchresults">Back to search results</Link></li>
             </ul>
           </nav>

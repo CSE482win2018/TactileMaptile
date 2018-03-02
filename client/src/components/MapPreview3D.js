@@ -67,14 +67,14 @@ class MapPreview3D extends Component {
     // elem.append("<p class='loading-3d-preview'>Loading 3D preview...</p>");
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setSize(width, height);
-    this.renderer.setClearColor( 0xe8e8e8, 1 );
+    this.renderer.setClearColor( 0xaaaaaa, 1 );
     // renderer.shadowMap.enabled = true; // doesn't work on an old machine if I enable shadows
     // renderer.shadowMapType = THREE.PCFSoftShadowMap;
 
     var loader = new STLLoader();
     loader.load(this.props.mapStlUrl, ( geometry ) => {
       // Mesh
-      this.mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial( { color: 0xffffff } ) );
+      this.mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial( { color: 0x9975B9 } ) );
       this.mesh.rotation.x = Math.PI * 1.5 + Math.PI / 4;
       this.mesh.castShadow = true;
       this.mesh.receiveShadow = true;

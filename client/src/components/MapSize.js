@@ -24,6 +24,11 @@ class MapSize extends Component {
         <div className="container">
           <nav className="nav-inline">
             <ul>
+              {!this.props.highContrast ? (
+                <li><a role="button" tabindex="0" onClick={() => this.props.setHighContrast(true)}>View page in high contrast</a></li>
+              ) : (
+                <li><a role="button" tabindex="0" onClick={() => this.props.setHighContrast(false)}>View page without high contrast</a></li>
+              )}          
               <li><Link to="/">Back to home</Link></li>
               <li><Link to="/confirmcenter">Back to confirm map center</Link></li>
             </ul>
@@ -36,7 +41,7 @@ class MapSize extends Component {
           <form onSubmit={this.handleDesignSubmit}>
             <fieldset>
               <legend>Map options</legend>
-              <div className="field">
+              <div className="field" style={{color: 'black'}}>
                 <label>Map print size</label>
                 <label htmlFor="size-select" className="select">
                   <select name="size-select" onChange={(event) => this.props.updateData({size: +event.target.value})} defaultValue={17}>
@@ -46,7 +51,7 @@ class MapSize extends Component {
                   </select>
                 </label>
               </div>
-              <div className="field">
+              <div className="field" style={{color: 'black'}}>
                 <label>Map scale</label>
                 <label htmlFor="scale-select" className="select">
                   <select name="scale-select" onChange={(event) => this.props.updateData({scale: +event.target.value})} defaultValue={2400}>

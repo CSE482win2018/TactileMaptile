@@ -27,9 +27,9 @@ class Home extends Component {
         <nav className="nav-inline">
           <ul>
             {!this.props.highContrast ? (
-              <li><Link to="/?highContrast">View page in high contrast</Link></li>
+              <li><a role="button" tabindex="0" onClick={() => this.props.setHighContrast(true)}>View page in high contrast</a></li>
             ) : (
-              <li><Link to="/">View page without high contrast</Link></li>
+              <li><a role="button" tabindex="0" onClick={() => this.props.setHighContrast(false)}>View page without high contrast</a></li>
             )}
           </ul>
         </nav>
@@ -38,6 +38,7 @@ class Home extends Component {
         </div>
         <div className="form-area">
           <LocationForm
+            highContrast={this.props.highContrast}
             data={this.props.data}
             updateData={this.props.updateData}
             setSearchResults={this.setSearchResults}
