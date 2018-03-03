@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
 import LocationForm from './LocationForm';
+import LinkButton from './LinkButton';
 import * as config from '../config.json';
 import '../App.css';
 import '../turret.css';
@@ -27,9 +28,9 @@ class Home extends Component {
         <nav className="nav-inline">
           <ul>
             {!this.props.highContrast ? (
-              <li><a role="button" tabindex="0" onClick={() => this.props.setHighContrast(true)}>View page in high contrast</a></li>
+              <li><LinkButton onClick={() => this.props.setHighContrast(true)}>View page in high contrast</LinkButton></li>
             ) : (
-              <li><a role="button" tabindex="0" onClick={() => this.props.setHighContrast(false)}>View page without high contrast</a></li>
+              <li><LinkButton onClick={() => this.props.setHighContrast(false)}>View page without high contrast</LinkButton></li>
             )}
           </ul>
         </nav>
